@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "pa-medicaid-exemption-workspace",
+  "builds": [
+    { "src": "index.html", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/$1" }
+  ]
+}

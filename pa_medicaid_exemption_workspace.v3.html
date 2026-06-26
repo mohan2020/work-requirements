@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penn Medicine PA Medicaid Exemption Workspace</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Epic EHR styling accents */
+        .epic-header {
+            background-color: #1e293b;
+            border-bottom: 3px solid #0284c7;
+        }
+        .epic-sidebar {
+            background-color: #27272a;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Architectural Shell Switcher -->
+    <div class="bg-indigo-900 text-indigo-100 text-xs py-2 px-4 flex justify-between items-center border-b border-indigo-950">
+        <div class="flex items-center space-x-2">
+            <span class="bg-indigo-700 text-white font-bold px-2 py-0.5 rounded text-[10px] uppercase">Architectural Sandbox</span>
+            <span>Simulate physical deployment separation:</span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <label class="inline-flex items-center space-x-1 cursor-pointer">
+                <input type="radio" name="runMode" value="dashboard" checked onchange="handleModeChange('dashboard')" class="text-indigo-600 focus:ring-indigo-500">
+                <span class="font-semibold">Independent Staff Dashboard</span>
+            </label>
+            <label class="inline-flex items-center space-x-1 cursor-pointer">
+                <input type="radio" name="runMode" value="fhir" onchange="handleModeChange('fhir')" class="text-indigo-600 focus:ring-indigo-500">
+                <span class="font-semibold">SMART on FHIR Point-of-Care (Patient-Context)</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Main Navigation Header for Standalone Staff Application -->
+    <header id="standalone-header" class="epic-header text-white px-6 py-4 shadow-md flex flex-wrap justify-between items-center z-10 transition-all duration-200">
+        <div class="flex items-center space-x-3">
+            <div class="bg-sky-600 p-2 rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-hospital text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">Penn Medicine</h1>
+                <p class="text-xs text-slate-300">Administrative Population Health Exemption Manager</p>
+            </div>
+        </div>
+        
+        <!-- API Settings Modal Button & User Profile -->
+        <div class="flex items-center space-x-4 mt-4 sm:mt-0">
+            <button onclick="openSettingsModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white p-2 rounded-lg border border-slate-700 transition duration-150 relative">
+                <i class="fa-solid fa-gears"></i>
+                <span id="api-indicator" class="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full border-2 border-slate-900"></span>
+            </button>
+            <div class="text-right">
+                <p class="text-sm font-semibold">Sarah Jenkins, MPH</p>
+                <p class="text-xs text-slate-400">Lead Health Systems Analyst</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Simulated Epic EHR Layout (Visible only in SMART on FHIR Mode) -->
+    <div id="epic-ehr-frame" class="hidden flex-1 flex flex-col bg-slate-900">
+        <!-- Epic Patient Banner Context Bar -->
+        <div class="bg-slate-800 text-white border-b border-slate-700 px-4 py-2 flex items-center justify-between text-xs">
+            <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-2">
+                    <span class="font-semibold text-slate-400">PATIENT:</span>
+                    <span id="epic-patient-name" class="font-bold text-sky-400 text-sm">Jane Doe</span>
+                </div>
+                <div><span class="text-slate-400">MRN:</span> <span id="epic-patient-mrn" class="font-mono">100-200-300</span></div>
+                <div><span class="text-slate-400">DOB:</span> <span id="epic-patient-dob">04/12/1988</span></div>
+                <div><span class="text-slate-400">AGE:</span> <span id="epic-patient-age">38</span></div>
+                <div><span class="text-slate-400">PAYER:</span> <span class="bg-sky-900 text-sky-200 font-bold px-1.5 py-0.5 rounded text-[10px]">PA MEDICAID (DHS)</span></div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="bg-emerald-600/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30 text-[10px] font-bold">SMART ON FHIR CONTEXT ACTIVE</span>
+                <select id="epic-patient-selector" onchange="loadPatientContextInFHIR(this.value)" class="bg-slate-700 text-white text-xs border border-slate-600 rounded p-1 font-medium">
+                    <!-- Dropdown for clinical context simulation -->
+                </select>
+            </div>
+        </div>
+
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Simulated Left Sidebar Nav of Epic Chart -->
+            <aside class="w-48 epic-sidebar text-slate-300 flex flex-col text-xs border-r border-slate-700 select-none hidden md:flex">
+                <div class="p-3 font-semibold bg-slate-800 text-slate-400 uppercase tracking-wider border-b border-slate-700">Patient Chart</div>
+                <nav class="flex-1 p-2 space-y-1">
+                    <a href="#" class="flex items-center space-x-2 p-2 hover:bg-slate-800 rounded text-slate-400"><i class="fa-solid fa-house-chimney"></i> <span>Chart Snapshot</span></a>
+                    <a href="#" class="flex items-center space-x-2 p-2 hover:bg-slate-800 rounded text-slate-400"><i class="fa-solid fa-prescription-bottle-medical"></i> <span>Medications</span></a>
+                    <a href="#" class="flex items-center space-x-2 p-2 hover:bg-slate-800 rounded text-slate-400"><i class="fa-solid fa-clipboard-list"></i> <span>Problem List</span></a>
+                    <a href="#" class="flex items-center space-x-2 p-2 hover:bg-slate-800 rounded text-slate-400"><i class="fa-solid fa-timeline"></i> <span>Encounters</span></a>
+                    <div class="pt-2 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider pl-2">External Apps</div>
+                    <a href="#" class="flex items-center space-x-2 p-2 bg-sky-950/50 text-sky-300 font-bold border-l-2 border-sky-400 rounded"><i class="fa-solid fa-hand-holding-medical"></i> <span>PA Medicaid Exemption</span></a>
+                </nav>
+            </aside>
+
+            <!-- SMART App Inner Canvas viewport -->
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6 flex flex-col">
+                <!-- SMART on FHIR Context Wrapper -->
+                <div id="fhir-app-viewport" class="flex-1 max-w-7xl mx-auto w-full space-y-6">
+                    <!-- Dynamic SMART on FHIR UI inserts here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Standalone Web App Main Shell -->
+    <main id="standalone-app-frame" class="flex-1 flex flex-col relative">
+        
+        <!-- Viewport container for staff registry -->
+        <section class="flex-1 p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
+            
+            <!-- Dashboard Overview Stats Cards (Refactored to 3 Columns, Removed Monthly Exposure Risk) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- Total Cohort Card -->
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
+                    <div class="space-y-1">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Target Medicaid Cohort</span>
+                        <span id="m-total-cohort" class="text-3xl font-extrabold text-slate-800">0</span>
+                        <span class="text-xs text-slate-500 block">Medicaid Expansion (Ages 19-64)</span>
+                    </div>
+                    <div class="bg-sky-100 text-sky-700 p-3 rounded-full text-lg">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                </div>
+
+                <!-- Percent Exempt Card -->
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
+                    <div class="space-y-1">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Exemption Validated</span>
+                        <div class="flex items-baseline space-x-2">
+                            <span id="m-exemption-cleared" class="text-3xl font-extrabold text-emerald-600">0</span>
+                            <span id="m-exemption-percentage" class="text-sm font-semibold text-emerald-600">(0%)</span>
+                        </div>
+                        <span class="text-xs text-slate-500 block">Certified &amp; Logged with CAO</span>
+                    </div>
+                    <div class="bg-emerald-100 text-emerald-700 p-3 rounded-full text-lg">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+
+                <!-- Active Pending Form Outreaches -->
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
+                    <div class="space-y-1">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Outreach Pending Signature</span>
+                        <div class="flex items-baseline space-x-2">
+                            <span id="m-pending-outreach" class="text-3xl font-extrabold text-amber-500">0</span>
+                            <span class="text-xs text-slate-400 font-medium">Forms Pre-Drafted</span>
+                        </div>
+                        <span class="text-xs text-slate-500 block">Requires Provider validation</span>
+                    </div>
+                    <div class="bg-amber-100 text-amber-700 p-3 rounded-full text-lg">
+                        <i class="fa-solid fa-signature"></i>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Advanced Filters & Patient Worklist Data Table Grid -->
+            <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+                
+                <!-- Filtering Bar Header -->
+                <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-3 items-center justify-between">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <!-- Search Patient -->
+                        <div class="relative min-w-[280px]">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <input type="text" id="worklist-search" oninput="filterRegistryWorklist()" placeholder="Search Name, MRN, or Medicaid ID..." class="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg block w-full pl-10 p-2.5 focus:ring-sky-500 focus:border-sky-500 shadow-sm">
+                        </div>
+                        
+                        <!-- Filter Exemption Status -->
+                        <select id="filter-exemption-status" onchange="filterRegistryWorklist()" class="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-2.5 focus:ring-sky-500 focus:border-sky-500 font-medium shadow-sm">
+                            <option value="ALL">All Exemption Statuses</option>
+                            <option value="UNASSESSED">Unassessed</option>
+                            <option value="ELIGIBLE_TIER_1">Eligible: Tier 1 (Clinical Auto-Exempt)</option>
+                            <option value="ELIGIBLE_TIER_2">Eligible: Tier 2 (Complex Comorbidities)</option>
+                            <option value="EXEMPT_COMPLETED">Exemption Completed &amp; Filed</option>
+                        </select>
+
+                        <!-- Filter CAO Location -->
+                        <select id="filter-cao" onchange="filterRegistryWorklist()" class="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-2.5 focus:ring-sky-500 focus:border-sky-500 font-medium shadow-sm">
+                            <option value="ALL">All CAO Offices</option>
+                            <option value="Philadelphia CAO - South">Philadelphia South</option>
+                            <option value="Philadelphia CAO - West">Philadelphia West</option>
+                            <option value="Delaware County CAO">Delaware County</option>
+                        </select>
+                    </div>
+
+                    <!-- Reset Trigger -->
+                    <button onclick="resetRegistryFilters()" class="text-slate-500 hover:text-slate-700 text-xs font-bold flex items-center space-x-1 p-2 bg-slate-200/50 hover:bg-slate-200 rounded transition duration-150">
+                        <i class="fa-solid fa-arrow-rotate-left"></i>
+                        <span>Reset Filters</span>
+                    </button>
+                </div>
+
+                <!-- Patient Worklist Table Container -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+                        <thead class="bg-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            <tr>
+                                <th class="px-6 py-3">Patient Context</th>
+                                <th class="px-6 py-3">Medicaid/MRN Info</th>
+                                <th class="px-6 py-3">CMS Medical Frailty Evaluation</th>
+                                <th class="px-6 py-3">PA DHS CAO Branch</th>
+                                <th class="px-6 py-3">Next Outreach Date</th>
+                                <th class="px-6 py-3">Staff Action Tracking</th>
+                                <th class="px-6 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="worklist-table-body" class="divide-y divide-slate-200 bg-white">
+                            <!-- Table Rows Filled Dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Dynamic table pagination/count details footer -->
+                <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+                    <div>
+                        Showing <span id="tbl-rendered-count" class="font-semibold text-slate-700">0</span> of <span id="tbl-total-count" class="font-semibold text-slate-700">0</span> evaluated Medicaid patients
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span class="bg-slate-200 text-slate-700 px-2 py-1 rounded font-mono font-bold">Databricks Engine Synced Today</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- CUSTOM NOTIFICATION BAR -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-3 max-w-sm w-full pointer-events-none">
+        <!-- Toast items added dynamically -->
+    </div>
+
+    <!-- SETTINGS & API CONFIGURATION MODAL -->
+    <div id="modal-settings" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden transition-all duration-300 scale-95 opacity-0 transform" id="modal-settings-content">
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-gears text-sky-500"></i>
+                    <h3 class="font-bold text-sm">System Connection Settings</h3>
+                </div>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white transition duration-150 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">Gemini API Key Connection (Optional)</label>
+                    <p class="text-xs text-slate-500">Insert your Gemini API key to allow the built-in CHW Outreach Planner to leverage real-time LLM generative prompts customized to patient language, health literacy barriers, or physical access restraints.</p>
+                    <div class="relative mt-1">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-key"></i>
+                        </span>
+                        <input type="password" id="api-key-input" placeholder="AIZA... (Leave blank for High-Fidelity Simulation)" class="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg block w-full pl-10 p-2.5 focus:ring-sky-500 focus:border-sky-500 shadow-sm">
+                    </div>
+                    <p class="text-[10px] text-slate-400 italic font-mono">Your key remains entirely in local storage. It is never routed or cached outside direct regional Google APIs.</p>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 text-xs">
+                    <span class="font-bold text-slate-700 block uppercase tracking-wide">PA State Integration Endpoints</span>
+                    <div class="grid grid-cols-2 gap-3 text-[11px] font-mono">
+                        <div>
+                            <span class="text-slate-400 block">DHS Claims Endpoint</span>
+                            <span class="text-slate-700">dhs.pa.gov/api/v1/lookback</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">HIO Network Hub</span>
+                            <span class="text-slate-700">p3n.exchange.org/r4</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-100 border-t border-slate-200 flex justify-end space-x-2">
+                <button onclick="closeSettingsModal()" class="px-4 py-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-bold rounded-lg transition duration-150">Cancel</button>
+                <button onclick="saveSettings()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg shadow transition duration-150">Save Credentials</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OUTREACH & CHW DISPATCH PLANNER DRAWER (Refactored from Modal to sliding side drawer) -->
+    <div id="modal-outreach" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex justify-end hidden transition-opacity duration-300 opacity-0" onclick="closeOutreachModal()">
+        
+        <div class="bg-white w-full max-w-lg shadow-2xl h-full flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out" id="modal-outreach-content" onclick="event.stopPropagation()">
+            
+            <!-- Drawer Header -->
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shrink-0">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-headset text-sky-500"></i>
+                    <h3 class="font-bold text-sm">Dispatched Outreach Planner &amp; Document Sender</h3>
+                </div>
+                <button onclick="closeOutreachModal()" class="text-slate-400 hover:text-white transition duration-150 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Drawer Content Body (Scrollable) -->
+            <div class="p-6 space-y-6 overflow-y-auto flex-1 text-sm text-slate-700">
+                
+                <!-- Patient Context Cards with Enriched Details -->
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-400 block uppercase font-bold">Target Patient</span>
+                            <span id="o-patient-name" class="font-extrabold text-slate-800 text-base">John Smith</span>
+                            <span id="o-patient-meta" class="text-[11px] text-slate-500 block">MRN: 200-300-400</span>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-xs text-slate-400 block uppercase font-bold">Exemption Rationale</span>
+                            <span id="o-patient-tier" class="bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-1 rounded inline-block uppercase tracking-wider">ELIGIBLE_TIER_2</span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 border-t border-slate-200 pt-3">
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-slate-400 block uppercase font-bold">Patient Phone</span>
+                            <span id="o-patient-phone" class="font-mono text-xs font-semibold text-slate-700">(215) 555-0142</span>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-slate-400 block uppercase font-bold">Date of Last Outreach</span>
+                            <span id="o-patient-last-outreach" class="text-xs font-semibold text-slate-700">2026-05-20</span>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-200 pt-3 space-y-1">
+                        <span class="text-[10px] text-slate-400 block uppercase font-bold">Clinical Descriptor</span>
+                        <p id="o-patient-rationale" class="text-xs text-slate-600 italic leading-relaxed">Polypharmacy and Severe COPD</p>
+                    </div>
+                </div>
+
+                <!-- Interactive AI Prompter Frame -->
+                <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                    <div class="bg-gradient-to-r from-sky-700 to-indigo-800 text-white px-4 py-2 flex justify-between items-center text-xs">
+                        <span class="font-bold flex items-center space-x-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                            <span>Gemini AI Outreach Assistant</span>
+                        </span>
+                        <span class="font-mono text-[10px] bg-slate-900/30 px-2 py-0.5 rounded">gemini-3-flash-preview</span>
+                    </div>
+                    
+                    <div class="p-4 space-y-3 bg-white">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label for="outreach-channel" class="block text-[11px] font-bold text-slate-500 uppercase">Channel</label>
+                                <select id="outreach-channel" class="w-full bg-slate-50 border border-slate-300 rounded p-1.5 text-xs">
+                                    <option value="sms">SMS Text Message</option>
+                                    <option value="email">Email Notification</option>
+                                    <option value="call_script">Phone Call Script</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="patient-barrier" class="block text-[11px] font-bold text-slate-500 uppercase">Target Barrier Mode</label>
+                                <select id="patient-barrier" class="w-full bg-slate-50 border border-slate-300 rounded p-1.5 text-xs">
+                                    <option value="standard">Standard Friendly Reminder</option>
+                                    <option value="cognitive">Simplified/Low Cognitive Load</option>
+                                    <option value="espanol">Spanish Translation Requirement</option>
+                                    <option value="transportation">Limited Transportation/Digital Access</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button onclick="generateAIOutreach()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded text-xs transition duration-150 flex items-center justify-center space-x-1.5 shadow-sm">
+                            <i class="fa-solid fa-wand-magic-sparkles animate-pulse"></i>
+                            <span>Generate Patient Outreach Draft</span>
+                        </button>
+
+                        <!-- Generated Content Area -->
+                        <div class="space-y-1 pt-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Output Draft Preview</span>
+                                <button onclick="copyOutreachText()" class="text-sky-600 hover:text-sky-700 text-xs font-semibold flex items-center space-x-1 hover:underline">
+                                    <i class="fa-regular fa-copy"></i>
+                                    <span>Copy Script</span>
+                                </button>
+                            </div>
+                            <textarea id="outreach-output-box" rows="4" class="w-full p-2.5 border border-slate-300 rounded-lg text-xs bg-slate-50 text-slate-700 code-font focus:bg-white focus:ring-sky-500 focus:border-sky-500 transition-colors duration-150" placeholder="Generated draft will render here..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Immediate Action Buttons -->
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                    <button onclick="markOutreachAction('SMS')" class="bg-slate-100 hover:bg-slate-200 text-slate-800 p-3 rounded-lg border border-slate-300 font-semibold transition flex flex-col items-center justify-center space-y-1">
+                        <i class="fa-solid fa-message text-indigo-600 text-lg"></i>
+                        <span>Dispatched SMS</span>
+                    </button>
+                    <button onclick="markOutreachAction('EMAIL')" class="bg-slate-100 hover:bg-slate-200 text-slate-800 p-3 rounded-lg border border-slate-300 font-semibold transition flex flex-col items-center justify-center space-y-1">
+                        <i class="fa-solid fa-paper-plane text-emerald-600 text-lg"></i>
+                        <span>Dispatched Email</span>
+                    </button>
+                    <button onclick="markOutreachAction('FAX')" class="bg-slate-100 hover:bg-slate-200 text-slate-800 p-3 rounded-lg border border-slate-300 font-semibold transition flex flex-col items-center justify-center space-y-1">
+                        <i class="fa-solid fa-print text-sky-600 text-lg"></i>
+                        <span>Direct Fax CAO Office</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer Close Actions -->
+            <div class="p-4 bg-slate-100 border-t border-slate-200 flex justify-end space-x-2 shrink-0">
+                <button onclick="closeOutreachModal()" class="px-4 py-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-bold rounded-lg transition duration-150">Close</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Static clinical mapping dictionaries (SNOMED-CT to ICD-10 mapping)
+        const snomedIcdTranslationMap = {
+            '58214004': { snomed: '58214004', snomedDesc: 'Schizophrenia (disorder)', icd: 'F20.9', icdDesc: 'Schizophrenia, unspecified' },
+            '13746004': { snomed: '13746004', snomedDesc: 'Bipolar I disorder, severe (disorder)', icd: 'F31.9', icdDesc: 'Bipolar disorder, unspecified' },
+            '28475009': { snomed: '28475009', snomedDesc: 'Recurrent severe major depressive episode', icd: 'F33.2', icdDesc: 'Major depressive disorder, recurrent, severe' },
+            '5602001': { snomed: '5602001', snomedDesc: 'Opioid dependence (disorder)', icd: 'F11.20', icdDesc: 'Opioid dependence, uncomplicated' },
+            '28743005': { snomed: '28743005', snomedDesc: 'Chronic alcoholism (disorder)', icd: 'F10.20', icdDesc: 'Alcohol dependence, uncomplicated' },
+            '254837009': { snomed: '254837009', snomedDesc: 'Malignant neoplasm of breast (disorder)', icd: 'C50.919', icdDesc: 'Malignant breast neoplasm, unspecified' },
+            '126852002': { snomed: '126852002', snomedDesc: 'Malignant neoplasm of colon (disorder)', icd: 'C18.9', icdDesc: 'Malignant colon neoplasm, unspecified' },
+            '432241000124101': { snomed: '432241000124101', snomedDesc: 'End stage renal disease on dialysis (disorder)', icd: 'N18.6', icdDesc: 'End-stage renal disease' },
+            '85232005': { snomed: '85232005', snomedDesc: 'Heart failure (disorder)', icd: 'I50.9', icdDesc: 'Heart failure, unspecified' },
+            '44054006': { snomed: '44054006', snomedDesc: 'Type 2 diabetes mellitus (disorder)', icd: 'E11.9', icdDesc: 'Type 2 diabetes mellitus without complications' },
+            '185086009': { snomed: '185086009', snomedDesc: 'Chronic obstructive pulmonary disease (disorder)', icd: 'J44.9', icdDesc: 'Chronic obstructive pulmonary disease, unspecified' }
+        };
+
+        // Master Application Mock Database / Cohort Registry (Enriched with Outreach Timings and Overrides)
+        let patientRegistry = [
+            {
+                id: 'P101',
+                name: 'Jane Doe',
+                dob: '04/12/1988',
+                age: 38,
+                mrn: '100-200-300',
+                medicaidId: 'PA-99882104',
+                phone: '(215) 555-0101',
+                lastOutreachDate: '2026-06-01',
+                nextOutreachDate: '2026-07-01',
+                exemptionStatus: 'ELIGIBLE_TIER_1',
+                caoOffice: 'Philadelphia CAO - South',
+                dueDate: '2027-01-01',
+                outreachStatus: 'NOT_STARTED',
+                snomedCodes: ['28475009', '5602001'],
+                utilization12mo: 0,
+                medCount: 3,
+                rationale: 'Active Severe Recurrent MDD & Substance Use (Opioid Dependence)',
+                isSigned: false,
+                physicianNotes: 'Patient has recurrent severe depression rendering consistent compliance with 80hr work rules impossible without severe mental decompensation.',
+                checkboxOverrides: {} // Tracks manual overrides for checkboxes in SMART on FHIR app
+            },
+            {
+                id: 'P102',
+                name: 'John Smith',
+                dob: '08/21/1972',
+                age: 53,
+                mrn: '200-300-400',
+                medicaidId: 'PA-88776655',
+                phone: '(215) 555-0102',
+                lastOutreachDate: '2026-05-20',
+                nextOutreachDate: '2026-06-28',
+                exemptionStatus: 'ELIGIBLE_TIER_2',
+                caoOffice: 'Philadelphia CAO - West',
+                dueDate: '2026-12-15',
+                outreachStatus: 'PENDING_REPLY',
+                snomedCodes: ['185086009', '44054006'],
+                utilization12mo: 3,
+                medCount: 12,
+                rationale: 'Severe COPD & Diabetes comorbid cluster with high emergency service utilization',
+                isSigned: false,
+                physicianNotes: 'Severe dyspnea on minimal exertion from advanced stage COPD. Compliant with home oxygen therapy.',
+                checkboxOverrides: {}
+            },
+            {
+                id: 'P103',
+                name: 'Elena Rostova',
+                dob: '11/03/1965',
+                age: 60,
+                mrn: '300-400-500',
+                medicaidId: 'PA-22446688',
+                phone: '(610) 555-0103',
+                lastOutreachDate: '2026-06-10',
+                nextOutreachDate: '2026-12-15',
+                exemptionStatus: 'EXEMPT_COMPLETED',
+                caoOffice: 'Delaware County CAO',
+                dueDate: '2026-11-30',
+                outreachStatus: 'COMPLETED_COMPASS',
+                snomedCodes: ['254837009'],
+                utilization12mo: 1,
+                medCount: 5,
+                rationale: 'Malignant Neoplasm of Breast undergoing Active Chemotherapy Protocol',
+                isSigned: true,
+                physicianNotes: 'Active clinical chemotherapy. Immune-compromised state requires total isolation and work deferrals.',
+                checkboxOverrides: {}
+            },
+            {
+                id: 'P104',
+                name: 'Marcus Washington',
+                dob: '05/19/1981',
+                age: 45,
+                mrn: '400-500-600',
+                medicaidId: 'PA-11335577',
+                phone: '(215) 555-0104',
+                lastOutreachDate: '2026-04-12',
+                nextOutreachDate: '2026-07-05',
+                exemptionStatus: 'ELIGIBLE_TIER_1',
+                caoOffice: 'Philadelphia CAO - South',
+                dueDate: '2027-01-01',
+                outreachStatus: 'NOT_STARTED',
+                snomedCodes: ['432241000124101'],
+                utilization12mo: 4,
+                medCount: 8,
+                rationale: 'End Stage Renal Disease (ESRD) with weekly hemodialysis schedule requirements',
+                isSigned: false,
+                physicianNotes: 'Requires outpatient hemodialysis three days per week. Post-dialysis fatigue precludes standard employment.',
+                checkboxOverrides: {}
+            },
+            {
+                id: 'P105',
+                name: 'Theresa Miller',
+                dob: '09/04/1990',
+                age: 35,
+                mrn: '500-600-700',
+                medicaidId: 'PA-44556677',
+                phone: '(215) 555-0105',
+                lastOutreachDate: '',
+                nextOutreachDate: '2026-07-15',
+                exemptionStatus: 'UNASSESSED',
+                caoOffice: 'Philadelphia CAO - West',
+                dueDate: '2027-01-15',
+                outreachStatus: 'NOT_STARTED',
+                snomedCodes: ['44054006'],
+                utilization12mo: 1,
+                medCount: 2,
+                rationale: 'Isolated Type 2 Diabetes without physical/cognitive limitation indicators',
+                isSigned: false,
+                physicianNotes: 'Mild diabetes under routine medical management. No current major systemic target-organ damage.',
+                checkboxOverrides: {}
+            },
+            {
+                id: 'P106',
+                name: 'Carlos Mendez',
+                dob: '12/28/1979',
+                age: 46,
+                mrn: '600-700-800',
+                medicaidId: 'PA-99001122',
+                phone: '(610) 555-0106',
+                lastOutreachDate: '2026-05-02',
+                nextOutreachDate: '2026-07-12',
+                exemptionStatus: 'ELIGIBLE_TIER_1',
+                caoOffice: 'Delaware County CAO',
+                dueDate: '2026-12-01',
+                outreachStatus: 'NOT_STARTED',
+                snomedCodes: ['58214004'],
+                utilization12mo: 0,
+                medCount: 4,
+                rationale: 'Schizophrenia (Disorder) with complex clinical management parameters',
+                isSigned: false,
+                physicianNotes: 'Persistent auditory hallucinations and cognitive deficits. Unable to manage complex instructions or sustained work environments.',
+                checkboxOverrides: {}
+            },
+            {
+                id: 'P107',
+                name: 'Sarah Jenkins',
+                dob: '03/14/1985',
+                age: 41,
+                mrn: '700-800-900',
+                medicaidId: 'PA-55443322',
+                phone: '(215) 555-0107',
+                lastOutreachDate: '2026-06-14',
+                nextOutreachDate: '2026-06-29',
+                exemptionStatus: 'ELIGIBLE_TIER_2',
+                caoOffice: 'Philadelphia CAO - South',
+                dueDate: '2027-01-01',
+                outreachStatus: 'PENDING_REPLY',
+                snomedCodes: ['185086009', '85232005'],
+                utilization12mo: 2,
+                medCount: 11,
+                rationale: 'Heart Failure and COPD with severe physical restriction parameters',
+                isSigned: false,
+                physicianNotes: 'LVEF 35% with persistent functional Class III symptoms. Marked dyspnea during routine tasks.',
+                checkboxOverrides: {}
+            }
+        ];
+
+        // Active View State Controller
+        let activeRunMode = 'dashboard'; // 'dashboard' or 'fhir'
+        let currentPatientFHIRId = 'P101'; // Default context patient
+        let currentSelectedPatientIdForOutreach = 'P101';
+
+        // Signature Pad Draw Context
+        let canvas, ctx;
+        let drawing = false;
+
+        // Initialize App on Window Load
+        window.onload = function() {
+            populateFHIRPatientSelectors();
+            syncModeUI();
+            checkApiKeyStatus();
+            
+            // Register scaling listener
+            window.addEventListener('resize', handleCanvasResize);
+        }
+
+        // Check if API key is in localstorage
+        function checkApiKeyStatus() {
+            const savedKey = localStorage.getItem('gemini_api_key');
+            const indicator = document.getElementById('api-indicator');
+            const inputField = document.getElementById('api-key-input');
+            
+            if (savedKey) {
+                indicator.className = "absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-slate-900";
+                inputField.value = savedKey;
+            } else {
+                indicator.className = "absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full border-2 border-slate-900";
+            }
+        }
+
+        // Save keys
+        function saveSettings() {
+            const keyVal = document.getElementById('api-key-input').value.trim();
+            if (keyVal) {
+                localStorage.setItem('gemini_api_key', keyVal);
+                showToast('Success', 'Gemini API Key saved and registered locally!', 'success');
+            } else {
+                localStorage.removeItem('gemini_api_key');
+                showToast('Key Removed', 'Using High-Fidelity local simulation for outreach.', 'info');
+            }
+            checkApiKeyStatus();
+            closeSettingsModal();
+        }
+
+        function openSettingsModal() {
+            const modal = document.getElementById('modal-settings');
+            const content = document.getElementById('modal-settings-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('modal-settings');
+            const content = document.getElementById('modal-settings-content');
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+    </script>
+
+    <script>
+        // Populate the EHR sandbox selector dropdowns
+        function populateFHIRPatientSelectors() {
+            const select = document.getElementById('epic-patient-selector');
+            select.innerHTML = '';
+            
+            patientRegistry.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `Chart Context: ${p.name} (MRN: ${p.mrn})`;
+                select.appendChild(opt);
+            });
+        }
+
+        // Manage active UI mode layout changes
+        function handleModeChange(mode) {
+            activeRunMode = mode;
+            syncModeUI();
+        }
+
+        // Redraw page templates depending on selection
+        function syncModeUI() {
+            const standaloneHeader = document.getElementById('standalone-header');
+            const standaloneFrame = document.getElementById('standalone-app-frame');
+            const epicFrame = document.getElementById('epic-ehr-frame');
+
+            if (activeRunMode === 'dashboard') {
+                standaloneHeader.classList.remove('hidden');
+                standaloneFrame.classList.remove('hidden');
+                epicFrame.classList.add('hidden');
+                updateDashboardMetrics();
+                updateRegistryWorklistTable();
+            } else {
+                standaloneHeader.classList.add('hidden');
+                standaloneFrame.classList.add('hidden');
+                epicFrame.classList.remove('hidden');
+                loadPatientContextInFHIR(currentPatientFHIRId);
+            }
+        }
+
+        // Switch patient context inside isolated EHR view
+        function loadPatientContextInFHIR(patientId) {
+            currentPatientFHIRId = patientId;
+            const patient = patientRegistry.find(p => p.id === patientId);
+            if (!patient) return;
+
+            // Sync Epic Context Banner Information
+            document.getElementById('epic-patient-name').textContent = patient.name;
+            document.getElementById('epic-patient-mrn').textContent = patient.mrn;
+            document.getElementById('epic-patient-dob').textContent = patient.dob;
+            document.getElementById('epic-patient-age').textContent = patient.age;
+            document.getElementById('epic-patient-selector').value = patientId;
+
+            // Render SMART on FHIR Application Interface Container inside the iframe boundary
+            renderFHIRAppContent(patient);
+            
+            // Initialize/reset canvas signature listeners
+            setTimeout(() => {
+                initSignaturePad();
+            }, 100);
+        }
+    </script>
+
+    <script>
+        // Handler for updating manual checkbox selections directly on the form
+        function toggleFormCheckbox(patientId, type, isChecked) {
+            const patient = patientRegistry.find(p => p.id === patientId);
+            if (!patient) return;
+            
+            if (!patient.checkboxOverrides) {
+                patient.checkboxOverrides = {};
+            }
+            patient.checkboxOverrides[type] = isChecked;
+            showToast('Form Verification Updated', `Manual override applied for ${type.toUpperCase()}: ${isChecked ? 'Checked' : 'Unchecked'}.`, 'info');
+        }
+
+        // Dynamic compiler for isolated clinician app inside Simulated Epic
+        function renderFHIRAppContent(patient) {
+            const container = document.getElementById('fhir-app-viewport');
+            
+            let statusBadge = '';
+            if (patient.exemptionStatus === 'ELIGIBLE_TIER_1') {
+                statusBadge = `<span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-200 uppercase tracking-wider">Eligible: Tier 1 Auto-Exempt</span>`;
+            } else if (patient.exemptionStatus === 'ELIGIBLE_TIER_2') {
+                statusBadge = `<span class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1.5 rounded-full border border-amber-200 uppercase tracking-wider">Eligible: Tier 2 (Complex Comorbidities)</span>`;
+            } else if (patient.exemptionStatus === 'EXEMPT_COMPLETED') {
+                statusBadge = `<span class="bg-sky-100 text-sky-800 text-xs font-bold px-3 py-1.5 rounded-full border border-sky-200 uppercase tracking-wider">Exemption Certified &amp; Submitted</span>`;
+            } else {
+                statusBadge = `<span class="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-full border border-slate-200 uppercase tracking-wider">Unassessed</span>`;
+            }
+
+            // Determine check states incorporating active overrides
+            let s_smi = patient.checkboxOverrides?.smi !== undefined ? patient.checkboxOverrides.smi : false;
+            let s_sud = patient.checkboxOverrides?.sud !== undefined ? patient.checkboxOverrides.sud : false;
+            let s_oncology = patient.checkboxOverrides?.oncology !== undefined ? patient.checkboxOverrides.oncology : false;
+            let s_comorbidity = patient.checkboxOverrides?.comorbidity !== undefined ? patient.checkboxOverrides.comorbidity : false;
+
+            // If override isn't set, default to SNOMED mapping logic
+            let mappingRows = '';
+            patient.snomedCodes.forEach(code => {
+                const mapInfo = snomedIcdTranslationMap[code];
+                if (mapInfo) {
+                    if (['28475009', '58214004', '13746004'].includes(code) && patient.checkboxOverrides?.smi === undefined) s_smi = true;
+                    if (['5602001', '28743005'].includes(code) && patient.checkboxOverrides?.sud === undefined) s_sud = true;
+                    if (['254837009', '126852002', '432241000124101', '85232005'].includes(code) && patient.checkboxOverrides?.oncology === undefined) s_oncology = true;
+
+                    mappingRows += `
+                        <div class="flex flex-col bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1 text-xs">
+                            <div class="flex justify-between font-bold text-slate-700">
+                                <span>SNOMED-CT: ${mapInfo.somed || mapInfo.snomed}</span>
+                                <i class="fa-solid fa-arrow-right-long text-sky-600"></i>
+                                <span>ICD-10: ${mapInfo.icd}</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-[10px] text-slate-500">
+                                <p class="truncate">Concept: ${mapInfo.snomedDesc}</p>
+                                <p class="truncate text-right">Billing equivalence: ${mapInfo.icdDesc}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (patient.exemptionStatus === 'ELIGIBLE_TIER_2' && patient.checkboxOverrides?.comorbidity === undefined) {
+                s_comorbidity = true;
+            }
+
+            const isFormCompleted = patient.exemptionStatus === 'EXEMPT_COMPLETED';
+
+            container.innerHTML = `
+                <div class="bg-slate-100 border border-slate-300 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center space-x-2 text-slate-600 text-xs">
+                        <span class="bg-sky-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase">Clinician Workspace</span>
+                        <i class="fa-solid fa-angle-right"></i>
+                        <span>Medicaid Community Engagement Exemption Verification</span>
+                    </div>
+                    <span class="text-xs text-slate-500 font-medium">UMLS Translation Engine Active</span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Left Column: Patient clinical metrics, SNOMED translator -->
+                    <div class="lg:col-span-5 space-y-6">
+                        <!-- Clinical Insight Card -->
+                        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 overflow-hidden relative">
+                            <div class="absolute top-0 left-0 w-2 h-full bg-sky-600"></div>
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-xl font-extrabold text-slate-900">${patient.name}</h3>
+                                    <p class="text-xs text-slate-500">Medicaid ID: <span class="font-mono font-semibold">${patient.medicaidId}</span></p>
+                                </div>
+                                ${statusBadge}
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-100 text-xs">
+                                <div>
+                                    <span class="text-slate-400 block uppercase font-bold tracking-wider text-[10px]">County Office</span>
+                                    <span class="font-semibold text-slate-700">${patient.caoOffice}</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block uppercase font-bold tracking-wider text-[10px]">State Redetermination Due</span>
+                                    <span class="font-semibold text-red-600">${new Date(patient.dueDate).toLocaleDateString('en-US')}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SNOMED to ICD-10 Mapping -->
+                        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+                            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                                <h4 class="font-bold text-slate-900 text-xs flex items-center space-x-2">
+                                    <i class="fa-solid fa-arrows-spin text-sky-600 animate-spin"></i>
+                                    <span>EHR Problem List Translator</span>
+                                </h4>
+                                <span class="text-[10px] text-slate-400 font-mono">Clarity Mapping Pool</span>
+                            </div>
+                            <div class="space-y-3">
+                                <p class="text-xs text-slate-500">The state requires explicit ICD-10 codes to process ex-parte administrative exemptions, while Penn Medicine clinical notes utilize granular SNOMED codes. Real-time translation mappings below:</p>
+                                <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                    ${mappingRows}
+                                </div>
+
+                                <!-- Tier 2 Metric Section (COPD/Util limits) -->
+                                ${patient.exemptionStatus === 'ELIGIBLE_TIER_2' ? `
+                                    <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 space-y-2 mt-4">
+                                        <p class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Tier 2 Comorbidity Risk Evaluation</p>
+                                        <div class="grid grid-cols-2 gap-2 text-xs">
+                                            <div class="bg-white p-2 rounded border border-slate-200">
+                                                <span class="text-slate-400 block text-[10px]">ED Encounters (12mo)</span>
+                                                <span class="text-base font-bold text-slate-800">${patient.utilization12mo} visits</span>
+                                            </div>
+                                            <div class="bg-white p-2 rounded border border-slate-200">
+                                                <span class="text-slate-400 block text-[10px]">Active Rx Count</span>
+                                                <span class="text-base font-bold text-slate-800">${patient.medCount} therapies</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Interactive PA 1663 Attestation Form -->
+                    <div class="lg:col-span-7">
+                        <div class="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden flex flex-col h-full">
+                            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fa-regular fa-file-pdf text-rose-500 text-xl"></i>
+                                    <span class="font-bold text-sm">PA MEDICAL FRAILTY PROVIDER ATTESTATION FORM</span>
+                                </div>
+                                <span class="bg-emerald-600/20 text-emerald-400 text-[10px] font-bold px-3 py-1 rounded border border-emerald-500/30">Auto-Generated Draft</span>
+                            </div>
+
+                            <!-- Interactive Physical Document Simulation -->
+                            <div class="p-6 space-y-6 bg-slate-50 max-h-[500px] overflow-y-auto text-slate-700 leading-relaxed border-b border-slate-200 text-xs">
+                                
+                                <div class="text-center pb-4 border-b border-slate-300">
+                                    <h2 class="font-extrabold text-slate-900 text-sm">COMMONWEALTH OF PENNSYLVANIA • DEPARTMENT OF HUMAN SERVICES</h2>
+                                    <h3 class="text-[10px] tracking-wider font-bold text-slate-500 uppercase mt-1">Medical Frailty Self-Declaration and Provider Attestation</h3>
+                                </div>
+
+                                <div class="bg-slate-800 text-white p-2 text-[10px] font-bold rounded uppercase tracking-wider">
+                                    Section B: Licensed Provider Attestation of Impairment
+                                </div>
+
+                                <p class="text-[11px] text-slate-600">
+                                    This section must be completed and signed by a licensed physician, physician assistant, certified registered nurse practitioner (CRNP), or licensed psychologist. By completing this form, you certify that the patient's capacity to meet the standard 80-hour monthly work/community engagement requirement is significantly impaired.
+                                </p>
+
+                                <div class="grid grid-cols-3 gap-2 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                    <div>
+                                        <span class="text-slate-400 block font-bold text-[10px]">Patient Name:</span>
+                                        <span class="font-semibold text-slate-800">${patient.name}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-400 block font-bold text-[10px]">DOB:</span>
+                                        <span class="font-semibold text-slate-800">${patient.dob}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-400 block font-bold text-[10px]">Medicaid ID:</span>
+                                        <span class="font-semibold text-slate-800 font-mono">${patient.medicaidId}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Diagnostic Checkbox list (Fully editable based on overrides) -->
+                                <div class="space-y-3 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                                    <div class="flex justify-between items-center">
+                                        <p class="text-[10px] font-extrabold text-slate-900 uppercase tracking-wide">Automatic Mapped Clinical Impairments (Editable check-list)</p>
+                                        <span class="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">Manual Toggle Active</span>
+                                    </div>
+                                    
+                                    <div class="space-y-3 mt-2">
+                                        <label class="flex items-start space-x-3 text-xs cursor-pointer">
+                                            <input type="checkbox" id="chk-smi" onchange="toggleFormCheckbox('${patient.id}', 'smi', this.checked)" ${s_smi ? 'checked' : ''} ${isFormCompleted ? 'disabled' : ''} class="mt-0.5 rounded text-sky-600 h-4 w-4 border-slate-300">
+                                            <div>
+                                                <span class="font-bold text-slate-800 block">Severe Mental Illness (SMI)</span>
+                                                <span class="text-slate-500">Impairment stemming from diagnosed Serious Mental Illness (e.g. Schizophrenia, Bipolar, Recurrent Severe Major Depression).</span>
+                                            </div>
+                                        </label>
+                                        <label class="flex items-start space-x-3 text-xs cursor-pointer">
+                                            <input type="checkbox" id="chk-sud" onchange="toggleFormCheckbox('${patient.id}', 'sud', this.checked)" ${s_sud ? 'checked' : ''} ${isFormCompleted ? 'disabled' : ''} class="mt-0.5 rounded text-sky-600 h-4 w-4 border-slate-300">
+                                            <div>
+                                                <span class="font-bold text-slate-800 block">Substance Use Disorder (SUD)</span>
+                                                <span class="text-slate-500">Active participation in, or diagnosis with, severe substance use dependence requiring continuous medical supervision or rehabilitation.</span>
+                                            </div>
+                                        </label>
+                                        <label class="flex items-start space-x-3 text-xs cursor-pointer">
+                                            <input type="checkbox" id="chk-oncology" onchange="toggleFormCheckbox('${patient.id}', 'oncology', this.checked)" ${s_oncology ? 'checked' : ''} ${isFormCompleted ? 'disabled' : ''} class="mt-0.5 rounded text-sky-600 h-4 w-4 border-slate-300">
+                                            <div>
+                                                <span class="font-bold text-slate-800 block">Active Oncological / Severe Disease State</span>
+                                                <span class="text-slate-500">Malignant neoplasm under active treatment, or progressive organ failure (ESRD, Stage III/IV Heart Failure).</span>
+                                            </div>
+                                        </label>
+                                        <label class="flex items-start space-x-3 text-xs cursor-pointer">
+                                            <input type="checkbox" id="chk-comorbidity" onchange="toggleFormCheckbox('${patient.id}', 'comorbidity', this.checked)" ${s_comorbidity ? 'checked' : ''} ${isFormCompleted ? 'disabled' : ''} class="mt-0.5 rounded text-sky-600 h-4 w-4 border-slate-300">
+                                            <div>
+                                                <span class="font-bold text-slate-800 block">Tier 2 Comorbidities &amp; High Utilization Limits</span>
+                                                <span class="text-slate-500">Clinical judgment confirms physical or cognitive impairment caused by multiple co-occurring chronic illnesses.</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Physician notes segment (Editable) -->
+                                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-2">
+                                    <div class="flex justify-between items-center">
+                                        <label for="form-physician-notes" class="block font-bold text-slate-800 uppercase tracking-wider text-[10px]">Clinical Justification Statement &amp; Notes</label>
+                                        <span class="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">Editable Field</span>
+                                    </div>
+                                    <textarea id="form-physician-notes" 
+                                              oninput="updatePhysicianNotes('${patient.id}', this.value)" 
+                                              rows="3" 
+                                              ${isFormCompleted ? 'disabled' : ''} 
+                                              class="w-full bg-slate-50 p-3 rounded border border-slate-300 text-slate-700 text-xs italic focus:bg-white focus:ring-sky-500 focus:border-sky-500 transition-colors duration-150 outline-none resize-none" 
+                                              placeholder="Enter custom clinical justifications for PA Medicaid ex-parte exemption...">${patient.physicianNotes}</textarea>
+                                </div>
+
+                                <div class="bg-amber-50 text-amber-900 border border-amber-200 rounded-lg p-3 text-[11px] flex items-start space-x-2">
+                                    <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm mt-0.5"></i>
+                                    <p>
+                                        <strong>Impairment Attestation:</strong> By applying my digital signature below, I certify under penalty of administrative review that the patient is physically or mentally impaired to the extent they cannot engage in 80 hours of monthly work/community service.
+                                    </p>
+                                </div>
+
+                                <!-- Provider Signature Box -->
+                                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-[10px] font-bold text-slate-800 uppercase tracking-wider flex items-center space-x-1">
+                                            <i class="fa-solid fa-pen-nib text-sky-600"></i>
+                                            <span>Authorized Provider Signature (Sign below)</span>
+                                        </span>
+                                        ${!isFormCompleted ? `
+                                            <button onclick="clearClinicianSignature()" class="text-rose-600 hover:text-rose-700 text-[10px] font-semibold hover:underline flex items-center space-x-1">
+                                                <i class="fa-solid fa-eraser"></i>
+                                                <span>Clear Pad</span>
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                    <div class="border border-slate-300 rounded bg-slate-50 h-28 relative overflow-hidden">
+                                        ${isFormCompleted ? `
+                                            <div class="absolute inset-0 bg-emerald-50 flex flex-col items-center justify-center text-emerald-800">
+                                                <i class="fa-solid fa-circle-check text-2xl mb-1 text-emerald-600"></i>
+                                                <span class="font-bold text-xs uppercase tracking-wide">Signature Authenticated &amp; Pushed to State</span>
+                                                <span class="text-[10px] text-emerald-600 code-font mt-0.5">EHR-REF: SIG_ENC_98824104</span>
+                                            </div>
+                                        ` : `
+                                            <canvas id="sig-pad-clinician" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+                                            <div id="sig-pad-prompt" class="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-[10px]">
+                                                <span>Draw Signature with mouse, touch, or pen stylus</span>
+                                            </div>
+                                        `}
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 text-[10px]">
+                                        <div>
+                                            <span class="text-slate-400 block font-bold text-[9px] uppercase">Attesting Professional</span>
+                                            <span class="font-semibold text-slate-700">Siobhan Mita, MD (NPI: 188204901)</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-slate-400 block font-bold text-[9px] uppercase">Clinical Specialty</span>
+                                            <span class="font-semibold text-slate-700">Penn Medicine Emergency Department</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Submission Panel -->
+                            <div class="p-4 bg-slate-100 flex flex-col sm:flex-row gap-3">
+                                ${!isFormCompleted ? `
+                                    <button onclick="submitExemptionAttestation()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg shadow transition duration-150 flex items-center justify-center space-x-2 text-xs">
+                                        <i class="fa-solid fa-signature"></i>
+                                        <span>Sign &amp; Push to State HIO</span>
+                                    </button>
+                                    <button onclick="openPatientOutreachModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow transition duration-150 flex items-center justify-center space-x-2 text-xs">
+                                        <i class="fa-solid fa-paper-plane"></i>
+                                        <span>Patient Education Outreach</span>
+                                    </button>
+                                ` : `
+                                    <div class="w-full text-center py-2 text-emerald-800 font-bold text-xs bg-emerald-100/50 rounded-lg border border-emerald-200">
+                                        Form completed and processed on ${new Date().toLocaleDateString()}. Exemption finalized with PA DHS.
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            `;
+        }
+    </script>
+
+    <script>
+        // Draw handler for clinician signatures
+        function initSignaturePad() {
+            canvas = document.getElementById('sig-pad-clinician');
+            if (!canvas) return; // Ignore if patient form is already completed
+
+            ctx = canvas.getContext('2d');
+            handleCanvasResize();
+
+            ctx.strokeStyle = '#0284c7'; // Sky-600 color
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+
+            // Desktop events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+
+            // Touch events
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                startDrawing(touch);
+            });
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                draw(touch);
+            });
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+
+        function handleCanvasResize() {
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            
+            // Reapply settings because size changes reset canvas states
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+        }
+
+        function startDrawing(e) {
+            drawing = true;
+            const prompt = document.getElementById('sig-pad-prompt');
+            if (prompt) prompt.classList.add('hidden');
+            const pos = getMousePos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+            const pos = getMousePos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            drawing = false;
+        }
+
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            return {
+                x: (clientX - rect.left) / (rect.right - rect.left) * canvas.width,
+                y: (clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+            };
+        }
+
+        function clearClinicianSignature() {
+            if (!canvas) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('sig-pad-prompt').classList.remove('hidden');
+        }
+
+        // Live state update for the clinical notes field to preserve changes during form signing/redrawing
+        function updatePhysicianNotes(patientId, value) {
+            const patient = patientRegistry.find(p => p.id === patientId);
+            if (patient) {
+                patient.physicianNotes = value;
+            }
+        }
+
+        // Finalize form and save state
+        function submitExemptionAttestation() {
+            const patient = patientRegistry.find(p => p.id === currentPatientFHIRId);
+            if (!patient) return;
+
+            patient.isSigned = true;
+            patient.exemptionStatus = 'EXEMPT_COMPLETED';
+            patient.outreachStatus = 'COMPLETED_COMPASS';
+
+            showToast('DocumentReference Logged', 'EHR pre-populated form draft signed and saved in patient database.', 'info');
+            
+            setTimeout(() => {
+                showToast('HIO Transmission Confirmed', 'Exemption certified via P3N exchange directly to Pennsylvania DHS ex-parte systems.', 'success');
+                // Reload viewport
+                loadPatientContextInFHIR(currentPatientFHIRId);
+            }, 1200);
+        }
+    </script>
+
+    <script>
+        // Update dashboard KPIs (Refactored to exclude risk exposure amounts)
+        function updateDashboardMetrics() {
+            const totalCount = patientRegistry.length;
+            const exemptCount = patientRegistry.filter(p => p.exemptionStatus === 'EXEMPT_COMPLETED').length;
+            const pendingCount = patientRegistry.filter(p => p.exemptionStatus.includes('ELIGIBLE')).length;
+
+            const percentage = totalCount > 0 ? Math.round((exemptCount / totalCount) * 100) : 0;
+
+            document.getElementById('m-total-cohort').textContent = totalCount.toLocaleString();
+            document.getElementById('m-exemption-cleared').textContent = exemptCount.toLocaleString();
+            document.getElementById('m-exemption-percentage').textContent = `(${percentage}%)`;
+            document.getElementById('m-pending-outreach').textContent = pendingCount.toLocaleString();
+        }
+
+        // Render data grids for population managers
+        function updateRegistryWorklistTable() {
+            renderRegistryTableRows(patientRegistry);
+        }
+    </script>
+
+    <script>
+        function renderRegistryTableRows(data) {
+            const tbody = document.getElementById('worklist-table-body');
+            tbody.innerHTML = '';
+
+            data.forEach(p => {
+                let badgeClass = 'bg-slate-100 text-slate-700 border border-slate-200';
+                let rawStatusText = p.exemptionStatus.replace('_', ' ');
+                if (p.exemptionStatus === 'ELIGIBLE_TIER_1') {
+                    badgeClass = 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+                    rawStatusText = 'Tier 1 Auto-Exempt';
+                } else if (p.exemptionStatus === 'ELIGIBLE_TIER_2') {
+                    badgeClass = 'bg-amber-100 text-amber-800 border border-amber-200';
+                    rawStatusText = 'Tier 2 Comorbidity';
+                } else if (p.exemptionStatus === 'EXEMPT_COMPLETED') {
+                    badgeClass = 'bg-sky-100 text-sky-800 border border-sky-200';
+                    rawStatusText = 'Exemption Filed';
+                }
+
+                let outreachBadge = 'bg-slate-100 text-slate-700';
+                if (p.outreachStatus === 'PENDING_REPLY') {
+                    outreachBadge = 'bg-purple-100 text-purple-800';
+                } else if (p.outreachStatus === 'COMPLETED_COMPASS') {
+                    outreachBadge = 'bg-emerald-100 text-emerald-800 font-bold';
+                }
+
+                const formattedNextOutreach = p.nextOutreachDate ? new Date(p.nextOutreachDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not Scheduled';
+
+                const rowHTML = `
+                    <tr class="hover:bg-slate-50 transition duration-150">
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-slate-900">${p.name}</div>
+                            <span class="text-xs text-slate-500 block">DOB: ${p.dob} (Age ${p.age})</span>
+                        </td>
+                        <td class="px-6 py-4 font-mono text-xs">
+                            <div class="font-semibold text-slate-700">${p.medicaidId}</div>
+                            <div class="text-[11px] text-slate-400">MRN: ${p.mrn}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wider inline-block ${badgeClass}">
+                                ${rawStatusText}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-xs font-medium text-slate-700">${p.caoOffice}</td>
+                        <td class="px-6 py-4 text-xs font-semibold text-slate-600">${formattedNextOutreach}</td>
+                        <td class="px-6 py-4">
+                            <span class="text-xs px-2 py-1 rounded inline-block ${outreachBadge}">
+                                ${p.outreachStatus.replace('_', ' ')}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right space-x-1.5 whitespace-nowrap">
+                            <button onclick="dispatchOutreachPlanner('${p.id}')" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-1.5 px-3 rounded-lg border border-indigo-200 transition duration-150">
+                                <i class="fa-solid fa-headset mr-1"></i> Outreach
+                            </button>
+                            <button onclick="simulateFaxCAO('${p.id}')" title="Direct Fax completed PA 1663" class="text-xs bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-1.5 px-3 rounded-lg border border-slate-200 transition duration-150">
+                                <i class="fa-solid fa-print"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', rowHTML);
+            });
+
+            document.getElementById('tbl-rendered-count').textContent = data.length;
+            document.getElementById('tbl-total-count').textContent = patientRegistry.length;
+        }
+
+        // Apply filters
+        function filterRegistryWorklist() {
+            const searchVal = document.getElementById('worklist-search').value.toLowerCase();
+            const filterExempt = document.getElementById('filter-exemption-status').value;
+            const filterCao = document.getElementById('filter-cao').value;
+
+            const filtered = patientRegistry.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(searchVal) || p.mrn.includes(searchVal) || p.medicaidId.toLowerCase().includes(searchVal);
+                const matchesStatus = filterExempt === 'ALL' || p.exemptionStatus === filterExempt;
+                const matchesCao = filterCao === 'ALL' || p.caoOffice === filterCao;
+
+                return matchesSearch && matchesStatus && matchesCao;
+            });
+
+            renderRegistryTableRows(filtered);
+        }
+
+        function resetRegistryFilters() {
+            document.getElementById('worklist-search').value = '';
+            document.getElementById('filter-exemption-status').value = 'ALL';
+            document.getElementById('filter-cao').value = 'ALL';
+            filterRegistryWorklist();
+        }
+
+        // Fax simulation directly from registry actions
+        function simulateFaxCAO(patientId) {
+            const patient = patientRegistry.find(p => p.id === patientId);
+            if (!patient) return;
+
+            showToast('Document Compilation Started', `Generating certified physical PA-1663 pack for ${patient.name}...`, 'info');
+            
+            setTimeout(() => {
+                showToast('Fax Standard Confirmed', `Signed documentation securely transmitted to CAO Office: "${patient.caoOffice}"`, 'success');
+            }, 1200);
+        }
+    </script>
+
+    <script>
+        // Dispatching the sliding drawer with enriched patient details
+        function dispatchOutreachPlanner(patientId) {
+            currentSelectedPatientIdForOutreach = patientId;
+            const patient = patientRegistry.find(p => p.id === patientId);
+            if (!patient) return;
+
+            document.getElementById('o-patient-name').textContent = patient.name;
+            document.getElementById('o-patient-meta').textContent = `MRN: ${patient.mrn} • Dob: ${patient.dob} • Medicaid ID: ${patient.medicaidId}`;
+            
+            // Populate New Phone and Outreach properties into the Drawer
+            document.getElementById('o-patient-phone').textContent = patient.phone || 'N/A';
+            document.getElementById('o-patient-last-outreach').textContent = patient.lastOutreachDate ? new Date(patient.lastOutreachDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No Record';
+
+            const tierBadge = document.getElementById('o-patient-tier');
+            tierBadge.textContent = patient.exemptionStatus.replace('_', ' ');
+            if (patient.exemptionStatus.includes('TIER_1')) {
+                tierBadge.className = "bg-emerald-100 text-emerald-800 text-xs font-extrabold px-2.5 py-1 rounded inline-block uppercase tracking-wider";
+            } else if (patient.exemptionStatus.includes('TIER_2')) {
+                tierBadge.className = "bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-1 rounded inline-block uppercase tracking-wider";
+            } else {
+                tierBadge.className = "bg-slate-100 text-slate-700 text-xs font-extrabold px-2.5 py-1 rounded inline-block uppercase tracking-wider";
+            }
+
+            document.getElementById('o-patient-rationale').textContent = `Clinical Profile: ${patient.rationale}`;
+            document.getElementById('outreach-output-box').value = '';
+
+            openOutreachModal();
+        }
+    </script>
+
+    <script>
+        // Core Gemini / Fallback builder
+        async function generateAIOutreach() {
+            const patient = patientRegistry.find(p => p.id === currentSelectedPatientIdForOutreach);
+            if (!patient) return;
+
+            const channel = document.getElementById('outreach-channel').value;
+            const barrier = document.getElementById('patient-barrier').value;
+            const outputBox = document.getElementById('outreach-output-box');
+
+            outputBox.value = "Initiating Google Gemini API thread...\nExecuting clinical translation models...";
+
+            const apiKey = localStorage.getItem('gemini_api_key') || "";
+            const useRealAPI = apiKey.length > 10;
+
+            const systemPrompt = `You are a Community Health Worker (CHW) lead at Penn Medicine. Write a compassionate, professional patient outreach script addressing the impending PA Medicaid 80-hour work requirement beginning Jan 1, 2027. Avoid dense technical legal jargon. Directly reference their conditions (${patient.rationale}) with absolute privacy. Explain that Penn Medicine has pre-populated their official PA 1663 Medical Exemption Form to protect their health coverage.`;
+
+            const userQuery = `Produce a highly structured, patient-specific draft for the channel: "${channel}". 
+            Target patient: ${patient.name}. 
+            Modify the copy completely to account for this specific barrier: "${barrier}". 
+            Provide clear next steps regarding either uploading their signed form to PA COMPASS or returning our team's follow-up calls.`;
+
+            if (useRealAPI) {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    }
+                };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error(`API Status Error: ${response.status}`);
+
+                    const result = await response.json();
+                    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (text) {
+                        outputBox.value = text;
+                        showToast('Gemini Translation Complete', 'Outreach copy compiled via Google Cloud!', 'success');
+                    } else {
+                        throw new Error('No content returned');
+                    }
+                } catch (err) {
+                    console.error("Gemini failed, loading fallback simulation:", err);
+                    showToast('Connection Refused', 'Falling back to high-fidelity simulated local output.', 'error');
+                    executeLocalSimulation(patient, channel, barrier, outputBox);
+                }
+            } else {
+                // High-fidelity simulation delay
+                setTimeout(() => {
+                    executeLocalSimulation(patient, channel, barrier, outputBox);
+                    showToast('Outreach Compiled', 'High-fidelity script drafted via localized rules engine.', 'success');
+                }, 1000);
+            }
+        }
+
+        // Local simulation generator
+        function executeLocalSimulation(patient, channel, barrier, outputBox) {
+            let output = "";
+            const formStatusMessage = patient.isSigned ? "Good news: your Penn Medicine provider Siobhan Mita, MD, has already signed and certified your PA-1663 Exemption document!" : "We have drafted your PA-1663 Medical Exemption form and need to coordinate a quick clinical sign-off with your provider.";
+
+            if (channel === 'sms') {
+                if (barrier === 'espanol') {
+                    output = `Penn Medicine: Hola ${patient.name}, nuevo requisito de trabajo para Medicaid comienza pronto. Su médico ha preparado la exención de salud por "${patient.rationale}". Llámenos al 215-555-0199 para subirlo a PA COMPASS.`;
+                } else if (barrier === 'cognitive') {
+                    output = `Penn Medicine Reminder:\n\n1. Pennsylvania is starting new monthly rules for Medicaid.\n2. ${patient.name}, we have prepared a medical exemption letter because of your health conditions (${patient.rationale}).\n3. Call us at 215-555-0199. We want to help you keep your health coverage!`;
+                } else if (barrier === 'transportation') {
+                    output = `Penn Med Alert: Hello ${patient.name}. PA Medicaid is starting monthly work/activity requirements. We have pre-populated your exemption form. If you cannot access the COMPASS website, please let us know so we can mail a pre-stamped return envelope or fax it to your County Office. Call: 215-555-0199.`;
+                } else {
+                    output = `Penn Med Outreach: Hello ${patient.name}. PA DHS is starting monthly work rules. Based on your health history, you qualify for an exemption. ${formStatusMessage} Please call our team at 215-555-0199 to finalize your filing.`;
+                }
+            } else if (channel === 'email') {
+                output = `Subject: Urgent Medicaid Action: Medical Exemption Ready for ${patient.name}\n\nDear ${patient.name},\n\nThe Pennsylvania Department of Human Services is implementing a monthly 80-hour community engagement and work requirement starting soon.\n\nBecause of your current care plan at Penn Medicine for "${patient.rationale}", you are eligible for an exemption from these reporting rules.\n\n${formStatusMessage}\n\nOur Community Health Team is here to help you upload this signed document to your PA COMPASS portal, or we can submit it directly to the local County Assistance Office on your behalf.\n\nPlease call us at 215-555-0199 as soon as possible to ensure your insurance coverage is not interrupted.\n\nWarm regards,\nPenn Medicine Support Team`;
+            } else {
+                output = `[CHW Phone Script Guide]\n\n"Hello ${patient.name}, my name is [Name] calling from the Penn Medicine Community Outreach Team. I'm reaching out to make sure your Medicaid health coverage continues smoothly with the new state work requirements.\n\nOur clinical records indicate that you qualify for a medical exemption due to your current treatment for ${patient.rationale}. ${formStatusMessage}\n\nDo you have an active PA COMPASS portal login, or would you prefer we coordinate sending this form directly to your South Philadelphia County Assistance office?"`;
+            }
+
+            outputBox.value = output;
+        }
+
+        function copyOutreachText() {
+            const text = document.getElementById('outreach-output-box');
+            text.select();
+            document.execCommand('copy');
+            showToast('Copied!', 'Outreach script copied to clipboard successfully.', 'success');
+        }
+
+        function markOutreachAction(channelType) {
+            const patient = patientRegistry.find(p => p.id === currentSelectedPatientIdForOutreach);
+            if (!patient) return;
+
+            patient.outreachStatus = 'PENDING_REPLY';
+            patient.lastOutreachDate = new Date().toISOString().split('T')[0]; // Save real-time outreach record
+            updateRegistryWorklistTable();
+            updateDashboardMetrics();
+            
+            showToast('Dispatch Successful', `Outreach channel [${channelType}] marked as dispatched for ${patient.name}.`, 'success');
+            closeOutreachModal();
+        }
+
+        // Open/Close Sliding Drawer controls
+        function openPatientOutreachModal() {
+            currentSelectedPatientIdForOutreach = currentPatientFHIRId;
+            dispatchOutreachPlanner(currentPatientFHIRId);
+        }
+
+        function openOutreachModal() {
+            const modal = document.getElementById('modal-outreach');
+            const content = document.getElementById('modal-outreach-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.classList.add('opacity-100');
+                content.classList.remove('translate-x-full');
+                content.classList.add('translate-x-0');
+            }, 15);
+        }
+
+        function closeOutreachModal() {
+            const modal = document.getElementById('modal-outreach');
+            const content = document.getElementById('modal-outreach-content');
+            content.classList.remove('translate-x-0');
+            content.classList.add('translate-x-full');
+            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+    </script>
+
+    <script>
+        // Standard notification toast builder
+        function showToast(title, message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toastId = 'toast-' + Date.now();
+            
+            let iconClass = 'fa-circle-check text-emerald-500';
+            let bgClass = 'bg-white border-emerald-200';
+            if (type === 'error') {
+                iconClass = 'fa-circle-xmark text-rose-500';
+                bgClass = 'bg-white border-rose-200';
+            } else if (type === 'info') {
+                iconClass = 'fa-circle-info text-sky-500';
+                bgClass = 'bg-white border-sky-200';
+            }
+
+            const toastHTML = `
+                <div id="${toastId}" class="flex items-start p-4 space-x-3 rounded-xl border shadow-lg transform transition-all duration-300 ease-out translate-y-2 opacity-0 pointer-events-auto ${bgClass}">
+                    <i class="fa-solid ${iconClass} text-lg mt-0.5"></i>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-slate-900 text-xs">${title}</h4>
+                        <p class="text-[11px] text-slate-500 mt-0.5 leading-normal">${message}</p>
+                    </div>
+                    <button onclick="dismissToast('${toastId}')" class="text-slate-400 hover:text-slate-600 transition-colors text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', toastHTML);
+            const el = document.getElementById(toastId);
+            
+            setTimeout(() => {
+                el.classList.remove('translate-y-2', 'opacity-0');
+                el.classList.add('translate-y-0', 'opacity-100');
+            }, 10);
+
+            setTimeout(() => {
+                dismissToast(toastId);
+            }, 5000);
+        }
+
+        function dismissToast(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('translate-y-0', 'opacity-100');
+                el.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => el.remove(), 300);
+            }
+        }
+    </script>
+</body>
+</html>

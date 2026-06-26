@@ -1,0 +1,322 @@
+/* =====================================================================
+   ENGAGE DESIGN SYSTEM — colors_and_type.css   ·   VIVID + PUBLIC SANS
+   Clinical & research CRM for Penn Medicine / Way to Health (W2H)
+   ---------------------------------------------------------------------
+   This is the "Vivid" visual direction: an electric-blue palette with
+   vibrant categorical data-viz, paired with the Public Sans typeface.
+   It is an ALTERNATIVE look for the same Engage product (same programs,
+   sites, content rules, components) — not a different app. The companion
+   "Penn" direction (Penn-brand navy/blue + Inter) lives on its own branch.
+   ---------------------------------------------------------------------
+   Load order:
+     1) This file (defines :root tokens + base element styles)
+     2) Public Sans + JetBrains Mono are pulled from Google Fonts below.
+   ===================================================================== */
+
+/* Public Sans — UI typeface (vivid direction), self-hosted (user-provided,
+   SIL OFL — see fonts/PublicSans-OFL.txt). The variable fonts cover weights
+   100–900, upright + italic. JetBrains Mono — IDs, MRNs, tabular clinical
+   values — loads from Google Fonts. */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@font-face {
+  font-family: 'Public Sans';
+  src: url('fonts/PublicSans-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Public Sans';
+  src: url('fonts/PublicSans-Italic-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  /* ---------------------------------------------------------------
+     1. BRAND PALETTE  —  VIVID (electric-blue)
+     Token names are kept stable across the Penn / Vivid directions so
+     the two branches diff cleanly; only the values change here.
+     --------------------------------------------------------------- */
+
+  /* Ink / deep blue — titles, brand anchor, strong filled elements */
+  --penn-navy:        #16203A;   /* vivid "ink" — headings, filled brand chips */
+  --penn-royal:       #1E4FBF;   /* deep blue — pressed/active states */
+  --penn-muted-blue:  #6B7488;   /* slate — inactive states, helper text */
+
+  /* Blue — actionable / interactive */
+  --penn-blue:        #2F6BF6;   /* PRIMARY interactive: CTAs, selected, links */
+  --penn-sky:         #5B9CFF;   /* states, strokes, accents on dark surfaces */
+  --penn-light-blue:  #C2D2F2;   /* soft blue — dividers, strong borders */
+
+  /* Red — accent + alerts (use sparingly) */
+  --penn-burgundy:    #C13238;   /* deep red — non-interactive accents only */
+  --penn-crimson:     #E5484D;   /* vivid red — alerts, destructive */
+
+  /* Neutrals */
+  --off-black:        #2A3349;   /* body copy */
+  --white:            #FFFFFF;
+
+  /* Cool-gray surface tints — surfaces & contrast states */
+  --light-navy-3:     #FBFCFE;
+  --light-navy-5:     #EFF2F8;
+  --light-navy-10:    #E4E8F1;
+  /* Blue washes — interactive hover/selected washes */
+  --light-sky-3:      #F7FAFF;
+  --light-sky-5:      #F1F5FE;
+  --light-sky-12:     #E9F0FF;
+
+  /* Alert palette */
+  --alert-crimson:    #E5484D;
+  --alert-crimson-bg: #FBE7E8;
+  --alert-canary:     #EF9C18;   /* secondary warning / rating */
+  --alert-canary-bg:  #FCEFD6;
+  --alert-green:      #1BA85C;    /* success / availability */
+  --alert-green-bg:   #DBF1E5;
+
+  /* ---------------------------------------------------------------
+     2. SEMANTIC TOKENS  (shadcn/ui contract, themed to Vivid)
+     --------------------------------------------------------------- */
+  --background:            var(--white);
+  --foreground:            var(--off-black);
+  --heading:               var(--penn-navy);
+
+  --card:                  var(--white);
+  --card-foreground:       var(--off-black);
+  --popover:               var(--white);
+  --popover-foreground:    var(--off-black);
+
+  --muted:                 var(--light-navy-5);
+  --muted-foreground:      var(--penn-muted-blue);
+
+  --primary:               var(--penn-blue);
+  --primary-foreground:    var(--white);
+  --primary-hover:         #2459D6;          /* blue, darkened */
+  --primary-active:        var(--penn-royal);
+
+  --secondary:             var(--light-navy-5);
+  --secondary-foreground:  var(--penn-navy);
+  --secondary-hover:       #E3E8F2;
+
+  --accent:                var(--light-sky-12); /* hover/selected wash */
+  --accent-foreground:     #2459D6;
+
+  --destructive:           var(--penn-crimson);
+  --destructive-foreground:var(--white);
+  --destructive-hover:     var(--penn-burgundy);
+
+  --success:               var(--alert-green);
+  --success-bg:            var(--alert-green-bg);
+  --warning:               var(--alert-canary);
+  --warning-bg:            var(--alert-canary-bg);
+
+  --border:                var(--light-navy-10);
+  --border-strong:         var(--penn-light-blue);
+  --input:                 var(--light-navy-10);
+  --ring:                  var(--penn-blue);
+
+  /* App chrome surfaces */
+  --app-canvas:            #F5F7FB;            /* page background behind cards */
+  --sidebar:               #0B1326;            /* deep ink nav rail */
+  --sidebar-foreground:    #C2CBDB;            /* cool off-white */
+  --sidebar-muted:         #7A8499;            /* inactive nav text */
+  --sidebar-active-bg:     rgba(47,107,246,.20);
+  --sidebar-accent:        #5B9CFF;            /* active marker (sky blue) */
+
+  /* Data-viz series — vibrant categorical hues. --primary is series 1. */
+  --chart-2:        #14B8C6;   /* teal */
+  --chart-3:        #8B5CF6;   /* violet */
+  --chart-4:        #EC4899;   /* magenta */
+  --chart-5:        #F59E0B;   /* amber */
+  --chart-neutral:  #94A3B8;   /* slate */
+
+  /* ---------------------------------------------------------------
+     3. TYPOGRAPHY  —  Public Sans
+     --------------------------------------------------------------- */
+  --font-sans: 'Public Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-inter: var(--font-sans);  /* legacy alias — kit references this name */
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Weights — Public Sans ships a full variable range. Engage uses:
+     Regular 400 body · Medium 500 controls · SemiBold 600 headings/labels ·
+     Bold 700 emphasis · ExtraBold 800 for large display moments. */
+  --fw-regular: 400;  /* @kind font */
+  --fw-medium:  500;  /* @kind font */
+  --fw-semibold:600;  /* @kind font */
+  --fw-bold:    700;  /* @kind font */
+  --fw-extra:   800;  /* @kind font */
+
+  /* App type scale (dense, data-dense CRM context). */
+  --text-2xs:   11px;
+  --text-xs:    12px;
+  --text-sm:    13px;
+  --text-base:  14px;   /* app default */
+  --text-md:    15px;
+  --text-lg:    16px;
+  --text-xl:    18px;
+  --text-2xl:   22px;
+  --text-3xl:   28px;
+  --text-4xl:   34px;
+  --text-5xl:   44px;
+
+  /* Line heights */
+  --lh-tight:   1.25;  /* @kind font */
+  --lh-heading: 1.35;  /* @kind font */
+  --lh-normal:  1.5;   /* @kind font */
+  --lh-prose:   1.7;   /* @kind font */
+
+  --tracking-tag: 0.06em;  /* eyebrow / tag tracking */
+
+  /* ---------------------------------------------------------------
+     4. RADIUS / SPACING / SHADOW / ELEVATION
+     --------------------------------------------------------------- */
+  --radius-sm:  4px;
+  --radius:     8px;    /* default control radius */
+  --radius-md:  10px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-full:9999px;
+
+  /* 4px spacing grid */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+  --space-12: 48px; --space-16: 64px;
+
+  /* Shadows — soft, ink-tinted, low-spread (calm elevation) */
+  --shadow-xs: 0 1px 2px rgba(22,32,58,.06);
+  --shadow-sm: 0 1px 3px rgba(22,32,58,.08), 0 1px 2px rgba(22,32,58,.05);
+  --shadow-md: 0 4px 12px rgba(22,32,58,.09), 0 2px 4px rgba(22,32,58,.05);
+  --shadow-lg: 0 12px 28px rgba(22,32,58,.13), 0 4px 8px rgba(22,32,58,.06);
+  --shadow-focus: 0 0 0 3px rgba(47,107,246,.30);  /* focus ring */
+
+  /* Table surfaces (theme-aware) */
+  --table-head-bg: var(--light-navy-3);
+  --table-hover:   var(--light-sky-5);
+  --table-sel:     var(--light-navy-5);
+}
+
+/* =====================================================================
+   DARK THEME  — set <html data-theme="dark">
+   Vivid dark surfaces; brighter blue for interactive.
+   ===================================================================== */
+:root[data-theme="dark"] {
+  --background:            #0A0E1A;
+  --foreground:            #D7DEEC;
+  --heading:               #F2F5FB;
+
+  --card:                  #0F1524;
+  --card-foreground:       #D7DEEC;
+  --popover:               #0F1524;
+  --popover-foreground:    #D7DEEC;
+
+  --muted:                 #161D2E;
+  --muted-foreground:      #828CA3;
+
+  --primary:               #3B82F6;
+  --primary-foreground:    #FFFFFF;
+  --primary-hover:         #5B98F8;
+  --primary-active:        #2E6BE0;
+
+  --secondary:             #182032;
+  --secondary-foreground:  #D7DEEC;
+  --secondary-hover:       #1F2940;
+
+  --accent:                #16243F;
+  --accent-foreground:     #D7DEEC;
+
+  --destructive:           #FF5A5F;
+  --destructive-foreground:#FFFFFF;
+  --destructive-hover:     #E5484D;
+  --success:               #34D17A;
+  --success-bg:            #11331F;
+  --warning:               #F5A623;
+  --warning-bg:            #3A2C12;
+
+  --border:                #1E2740;
+  --border-strong:         #2C3A5C;
+  --input:                 #161D2E;
+  --ring:                  #3B82F6;
+
+  --app-canvas:            #070A12;
+  --sidebar:               #080B14;
+  --sidebar-foreground:    #C2CBDB;
+  --sidebar-muted:         #6B7488;
+  --sidebar-active-bg:     rgba(59,130,246,.22);
+  --sidebar-accent:        #5B9CFF;
+
+  --table-head-bg:         #0E1320;
+  --table-hover:           #161D2E;
+  --table-sel:             #16243F;
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.30);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.36), 0 1px 2px rgba(0,0,0,.28);
+  --shadow-md: 0 4px 14px rgba(0,0,0,.42), 0 2px 4px rgba(0,0,0,.30);
+  --shadow-lg: 0 16px 36px rgba(0,0,0,.50), 0 4px 10px rgba(0,0,0,.34);
+  --shadow-focus: 0 0 0 3px rgba(59,130,246,.40);
+
+  /* brighter alert red in dark */
+  --penn-crimson:    #FF5A5F;
+  --alert-crimson:   #FF7176;
+  --alert-crimson-bg:#3A1518;
+}
+
+/* =====================================================================
+   BASE ELEMENT STYLES
+   ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--lh-normal);
+  color: var(--foreground);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Headings — ink, semibold, brand line-height */
+h1, h2, h3, h4, h5, h6 { color: var(--heading); font-weight: var(--fw-semibold); line-height: var(--lh-heading); margin: 0; }
+h1 { font-size: var(--text-4xl); letter-spacing: -0.02em; }
+h2 { font-size: var(--text-3xl); letter-spacing: -0.015em; }
+h3 { font-size: var(--text-2xl); letter-spacing: -0.01em; }
+h4 { font-size: var(--text-xl); }
+h5 { font-size: var(--text-lg); }
+h6 { font-size: var(--text-base); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: var(--tracking-tag); color: var(--muted-foreground); }
+
+p { margin: 0 0 var(--space-3); }
+.prose p { line-height: var(--lh-prose); font-size: var(--text-md); }
+
+a { color: var(--primary); text-decoration: none; font-weight: var(--fw-semibold); }
+a:hover { text-decoration: underline; }
+
+small, .text-small { font-size: var(--text-sm); }
+.text-muted { color: var(--muted-foreground); }
+
+code, kbd, samp, .mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  font-feature-settings: 'tnum' 1;
+}
+code {
+  background: var(--light-navy-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.08em 0.36em;
+  color: var(--penn-navy);
+}
+
+/* Tabular figures helper for IDs / metrics / clinical values */
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+
+/* Brand eyebrow / tag text */
+.eyebrow {
+  font-size: var(--text-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tag);
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}

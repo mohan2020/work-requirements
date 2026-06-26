@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "description": "Official DHS PDF templates in assets/. Add a new entry when dropping a form; run npm run scan-forms to refresh field inventory.",
+  "forms": [
+    {
+      "id": "PA_1663",
+      "schemaId": "PA_1663",
+      "title": "Employability Assessment Form (PA 1663)",
+      "templatePath": "assets/PA_1663_official.pdf",
+      "officialUrl": "https://www.pa.gov/content/dam/copapwp-pagov/en/dhs/documents/docs/documents/ma-response-forms/Employability%20Assessment%20Form.pdf",
+      "status": "active"
+    },
+    {
+      "id": "PA_MF",
+      "schemaId": "PA_MF",
+      "title": "Medical Frailty Self-Declaration & Provider Attestation",
+      "templatePath": null,
+      "officialUrl": "https://www.pa.gov/content/dam/copapwp-pagov/en/dhs/documents/medicaid/hr1-related/2026-05-may-pa-medical-frailty-overview-presentation.pdf",
+      "status": "awaiting_official_pdf",
+      "notes": "Drop official PDF as assets/PA_Medical_Frailty_official.pdf and set templatePath, then re-scan."
+    }
+  ]
+}
