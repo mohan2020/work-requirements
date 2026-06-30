@@ -77,6 +77,7 @@ function formatOutreachDate(iso) {
 }
 
 function formProgressLabel(patientId, formId) {
+  if (typeof formWorkflowLabel === 'function') return formWorkflowLabel(patientId, formId);
   const c = getFormCompletion(patientId, formId);
   return `${c.percent}%`;
 }
@@ -428,7 +429,13 @@ function renderStaffDrawerPrior(p) {
             <span class="when">${new Date(sub.savedAt).toLocaleDateString()} ${staffIcon('chevron-down', 15)}</span>
           </button>
           <div class="od-prior-body${i === 0 ? '' : ' hidden'}">
-            <div class="od-status">${sub.meta?.isDraft ? 'Draft' : 'Complete'} · ${sub.meta?.percentComplete ?? '—'}%</div>
+            <div class="od-status">${sub.meta?.isDraft ? 'Draft' : 'Complete'} · ${sub.meta?.percentComplete ?? '—'}%${(() => {
+              if (typeof initPatientFormWorkflow !== 'function') return '';
+              const wf = initPatientFormWorkflow(p)[sub.formId];
+              if (wf?.clinicianSigned) return ' · Clinician signed';
+              if (wf?.savedToChart) return ' · In chart';
+              return '';
+            })()}</div>
             <div class="od-chips">
               <span class="od-chip form">${sub.formId}</span>
             </div>

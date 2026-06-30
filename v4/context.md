@@ -7,7 +7,7 @@
 Interactive HTML prototype for Penn Medicine's PA Medicaid **community engagement (80-hour work) exemption** workflow. Two deployment personas:
 
 1. **Staff Dashboard** — CHWs / population health: Engage worklist, outreach drawer, exemption form fill.
-2. **SMART on FHIR POC App** — Clinicians: eligibility review, attestation, signature, HIO submission.
+2. **SMART on FHIR POC App** — Clinicians: same exemption forms as staff, save to chart, provider sign-off, HIO queue (prototype).
 
 Path: `prototype/v4/`. Static deploy (Vercel). Run `npx serve .` — do not use `file://`.
 
@@ -27,8 +27,9 @@ v4/
 │   └── mapping-wizard.css
 ├── js/
 │   ├── staff-workflow.js       # ★ Staff worklist + 3-panel drawer (primary staff UI)
+│   ├── fhir-workflow.js        # ★ SMART on FHIR — shared forms, chart save, sign-off
 │   ├── form-schemas.js         # FORM_SCHEMAS: PA_MF, PA_1663
-│   ├── form-engine.js          # Pre-fill, renderFormQuestionnaire, state
+│   ├── form-engine.js          # Pre-fill (ICD-10), renderFormQuestionnaire, state
 │   ├── mapping-storage.js      # Mapping versions + per-patient form drafts
 │   ├── ehr-field-catalog.js    # EHR field catalog (wizard step 1)
 │   ├── mapping-wizard.js       # Wizard step logic
@@ -61,17 +62,17 @@ Never generate synthetic DHS-mimic PDFs.
 
 Global state (inline in index.html):
 
-- `patientRegistry` — mock cohort
-- `snomedIcdTranslationMap`
-- `activeRunMode`, `currentPatientFHIRId`, `fhirViewTab`
+- `patientRegistry` — mock cohort; each patient has `icdCodes: [{ code, desc }]` (no SNOMED layer)
+- `patient.formWorkflow` — per-form `{ savedToChart, clinicianSigned, patientSigned }` (patient sign TBD)
+- `activeRunMode`, `currentPatientFHIRId`, `fhirFormState.activeFormId`
 
-Modules loaded before inline scripts: `form-schemas.js`, `pa-1663-field-map.js`, `mapping-storage.js`, `form-engine.js`, `pdf-export.js`, `staff-workflow.js`.
+Modules loaded before inline scripts: `form-schemas.js`, `pa-1663-field-map.js`, `mapping-storage.js`, `form-engine.js`, `pdf-export.js`, `staff-workflow.js`, `fhir-workflow.js`.
 
 ### Staff dashboard (Engage UI)
 
 **Shell:** `#staff-app.app` — sidebar (collapsible via `nav-collapsed`, persisted `exemption-nav-collapsed`), topbar search, worklist table.
 
-**Worklist:** `renderStaffWorklistRows()` in `staff-workflow.js` — play button per row, exemption badges, form progress %.
+**Worklist:** `renderStaffWorklistRows()` — play button, form progress via `formWorkflowLabel()` (`· CHW draft`, `· in chart`, `· signed`).
 
 **3-panel drawer:** `#staff-drawer-root` — Engage `od-panel` layout.
 
@@ -104,12 +105,15 @@ Modules loaded before inline scripts: `form-schemas.js`, `pa-1663-field-map.js`,
 
 **Open/close:** `openStaffDrawer(patientId)`, `closeStaffDrawer()`. Escape key closes. Click another row swaps patient.
 
-### FHIR mode (unchanged from prior v4)
+### FHIR mode (`js/fhir-workflow.js`)
 
-- `renderFHIRAppContent(patient)` — Clinical tab + Form Package tab
-- Signature canvas, `submitExemptionAttestation()`
-- `renderFormQuestionnaire()` for both forms
-- Legacy `#modal-outreach` still used from FHIR for Gemini AI outreach assistant
+- Same `FORM_SCHEMAS` / `form-engine.js` questionnaires as staff (PA_MF, PA_1663 tabs)
+- Loads CHW drafts via `applyDraftToFormState`; banner when partial draft exists
+- **Save to patient chart** → `fhirSaveToChart()` → `saveFormSubmission` + finalize
+- **Sign provider attestation** → `fhirClinicianSignOff()` → signature + `patient.formWorkflow`
+- Staff worklist: `formWorkflowLabel()` shows `· signed`, `· in chart`, or `· CHW draft`
+- **Patient signature — TBD** (Section A can be pre-filled; capture workflow deferred)
+- Legacy `#modal-outreach` for Gemini AI outreach assistant
 
 ### Settings modal
 
@@ -119,11 +123,11 @@ Gemini API key → `localStorage.gemini_api_key`. Used by FHIR outreach modal.
 
 **URL:** `form-mapping-wizard.html`
 
-Steps: EHR catalog → upload PDF → map fields → preview → save versions.
+Steps: EHR catalog → upload PDF → **click-to-map** (PDF field chip → PDF value → searchable EHR dropdown) → preview → save with **full mapping summary table**.
 
-- `ehr-field-catalog.js` — field definitions; sample pills labeled "Example value"
+- `mapping-wizard.js` — `selectPdfField()`, `renderEhrCombobox()`, `renderMappingSummaryTable()`
+- `ehr-field-catalog.js` — ICD-10 clinical fields; no SNOMED catalog entry
 - `mapping-storage.js` — `saveMappingVersion()`, IndexedDB PDF blobs
-- `mapping-wizard.js` — step navigation, pdf-lib field extract
 
 Legacy **`form-mapping.html`**: developer gap table via `analyzeAllFormsFromManifest()`.
 
@@ -131,15 +135,17 @@ Legacy **`form-mapping.html`**: developer gap table via `analyzeAllFormsFromMani
 
 | Module | Key exports |
 |--------|-------------|
-| `staff-workflow.js` | `openStaffDrawer`, `renderStaffWorklistRows`, `staffCallNow`, `staffSavePartial` |
-| `form-engine.js` | `getFormState`, `prefillFormData`, `renderFormQuestionnaire`, `getFormCompletion` |
-| `mapping-storage.js` | `saveFormSubmission`, `getPatientSubmissions`, `saveMappingVersion` |
+| `staff-workflow.js` | `openStaffDrawer`, `renderStaffWorklistRows`, `staffSavePartial`, `formWorkflowLabel` |
+| `fhir-workflow.js` | `renderFHIRAppContent`, `fhirSaveToChart`, `fhirClinicianSignOff`, `setFhirActiveForm` |
+| `form-engine.js` | `getFormState`, `prefillFormData`, `renderFormQuestionnaire`, `deriveIcdList` |
+| `mapping-storage.js` | `saveFormSubmission`, `applyDraftToFormState`, `saveMappingVersion` |
+| `mapping-wizard.js` | `selectPdfField`, `saveCurrentMapping`, `renderMappingSummaryTable` |
 | `pa-1663-field-map.js` | `PA_1663_PDF_FIELDS`, `buildPA1663FieldValues` |
 | `pdf-export.js` | `exportOfficialPA1663`, `exportFormPDF` |
 
 ## Tier logic
 
-- **Tier 1:** SMI, SUD, oncology, ESRD SNOMED/ICD matches
+- **Tier 1:** SMI, SUD, oncology, ESRD ICD-10 matches on problem list
 - **Tier 2:** Comorbidities + utilization (≥2 ED) or polypharmacy (≥10 meds)
 - Status: `UNASSESSED | ELIGIBLE_TIER_1 | ELIGIBLE_TIER_2 | EXEMPT_COMPLETED | NON_EXEMPT`
 
@@ -152,6 +158,8 @@ Legacy **`form-mapping.html`**: developer gap table via `analyzeAllFormsFromMani
 | Map PA 1663 PDF field | `pa-1663-field-map.js` + `FORM_PDF_MAPPINGS` |
 | Change worklist columns | `renderStaffWorklistRows()` in staff-workflow.js |
 | Change drawer outreach flow | `renderStaffDrawerCenter()` in staff-workflow.js |
+| Change FHIR form / sign flow | `fhir-workflow.js` |
+| Change mapping wizard UI | `mapping-wizard.js` + `mapping-wizard.css` |
 | Add EHR catalog field | `ehr-field-catalog.js` |
 | Add official PDF form | assets + forms-manifest.json + field-map JS |
 
@@ -163,4 +171,6 @@ Legacy **`form-mapping.html`**: developer gap table via `analyzeAllFormsFromMani
 
 ## Version note
 
-**v4 (June 2026):** Engage staff UI, 3-panel outreach drawer with telephony placeholder, form mapping wizard, official PA 1663 PDF pre-fill, per-patient draft persistence. **v3:** single-file HTML without form engine.
+**v4 (June 2026):** Engage staff UI, 3-panel outreach drawer, click-to-map PDF wizard, ICD-10-only clinical data, FHIR/staff shared form state + chart save + provider sign-off (patient signature TBD), official PA 1663 PDF pre-fill. **v3:** single-file HTML without form engine.
+
+**Branch:** `feature/v4-fhir-form-alignment` — FHIR form parity, mapping wizard redesign, SNOMED removal.

@@ -43,7 +43,6 @@ const EHR_FIELD_CATALOG = {
       fields: [
         { id: 'clinical.problemList', label: 'Active problem list (plain text)', fhir: 'Condition.code.text', type: 'textarea', sample: 'Major depressive disorder, recurrent, severe\nType 2 diabetes mellitus' },
         { id: 'clinical.icdList', label: 'Diagnoses with ICD-10 codes', fhir: 'Condition.code → ICD-10', type: 'textarea', sample: 'F33.2 — Major depressive disorder, recurrent severe\nE11.9 — Type 2 diabetes mellitus' },
-        { id: 'clinical.snomedList', label: 'SNOMED CT codes', fhir: 'Condition.code (SNOMED)', type: 'textarea', sample: '370143000, 44054006' },
         { id: 'clinical.rationale', label: 'Clinical exemption rationale summary', fhir: '(derived)', type: 'textarea', sample: 'Recurrent severe MDD with functional impairment limiting 80-hr community engagement' },
         { id: 'clinical.utilization12mo', label: 'ED visits (12 months)', fhir: '(analytics)', type: 'number', sample: '4' },
         { id: 'clinical.medCount', label: 'Active medication count', fhir: 'MedicationRequest (active)', type: 'number', sample: '12' },

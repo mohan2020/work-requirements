@@ -8,21 +8,19 @@ function todayISO() {
 }
 
 function deriveIcdList(patient) {
-  if (!patient.snomedCodes) return '';
-  return patient.snomedCodes
-    .map((code) => {
-      const m = snomedIcdTranslationMap[code];
-      return m ? `${m.icd} — ${m.icdDesc}` : code;
-    })
+  if (!patient.icdCodes?.length) return '';
+  return patient.icdCodes
+    .map(({ code, desc }) => (desc ? `${code} — ${desc}` : code))
     .join('\n');
 }
 
 function deriveImpairmentFlags(patient) {
   const flags = { impairment_smi: false, impairment_sud: false, impairment_oncology: false, impairment_comorbidity: false };
-  (patient.snomedCodes || []).forEach((code) => {
-    if (['28475009', '58214004', '13746004'].includes(code)) flags.impairment_smi = true;
-    if (['5602001', '28743005'].includes(code)) flags.impairment_sud = true;
-    if (['254837009', '126852002', '432241000124101', '85232005'].includes(code)) flags.impairment_oncology = true;
+  (patient.icdCodes || []).forEach(({ code }) => {
+    const c = String(code).toUpperCase();
+    if (/^F(20|31|33)/.test(c)) flags.impairment_smi = true;
+    if (/^F(10|11)/.test(c)) flags.impairment_sud = true;
+    if (/^C/.test(c) || c === 'N18.6' || /^I50/.test(c)) flags.impairment_oncology = true;
   });
   if (patient.exemptionStatus === 'ELIGIBLE_TIER_2') flags.impairment_comorbidity = true;
   if (patient.checkboxOverrides) {

@@ -55,6 +55,7 @@
     <script src="js/form-engine.js"></script>
     <script src="js/pdf-export.js"></script>
     <script src="js/staff-workflow.js"></script>
+    <script src="js/fhir-workflow.js"></script>
 </head>
 <body class="min-h-screen">
 
@@ -405,21 +406,6 @@
     </div>
 
     <script>
-        // Static clinical mapping dictionaries (SNOMED-CT to ICD-10 mapping)
-        const snomedIcdTranslationMap = {
-            '58214004': { snomed: '58214004', snomedDesc: 'Schizophrenia (disorder)', icd: 'F20.9', icdDesc: 'Schizophrenia, unspecified' },
-            '13746004': { snomed: '13746004', snomedDesc: 'Bipolar I disorder, severe (disorder)', icd: 'F31.9', icdDesc: 'Bipolar disorder, unspecified' },
-            '28475009': { snomed: '28475009', snomedDesc: 'Recurrent severe major depressive episode', icd: 'F33.2', icdDesc: 'Major depressive disorder, recurrent, severe' },
-            '5602001': { snomed: '5602001', snomedDesc: 'Opioid dependence (disorder)', icd: 'F11.20', icdDesc: 'Opioid dependence, uncomplicated' },
-            '28743005': { snomed: '28743005', snomedDesc: 'Chronic alcoholism (disorder)', icd: 'F10.20', icdDesc: 'Alcohol dependence, uncomplicated' },
-            '254837009': { snomed: '254837009', snomedDesc: 'Malignant neoplasm of breast (disorder)', icd: 'C50.919', icdDesc: 'Malignant breast neoplasm, unspecified' },
-            '126852002': { snomed: '126852002', snomedDesc: 'Malignant neoplasm of colon (disorder)', icd: 'C18.9', icdDesc: 'Malignant colon neoplasm, unspecified' },
-            '432241000124101': { snomed: '432241000124101', snomedDesc: 'End stage renal disease on dialysis (disorder)', icd: 'N18.6', icdDesc: 'End-stage renal disease' },
-            '85232005': { snomed: '85232005', snomedDesc: 'Heart failure (disorder)', icd: 'I50.9', icdDesc: 'Heart failure, unspecified' },
-            '44054006': { snomed: '44054006', snomedDesc: 'Type 2 diabetes mellitus (disorder)', icd: 'E11.9', icdDesc: 'Type 2 diabetes mellitus without complications' },
-            '185086009': { snomed: '185086009', snomedDesc: 'Chronic obstructive pulmonary disease (disorder)', icd: 'J44.9', icdDesc: 'Chronic obstructive pulmonary disease, unspecified' }
-        };
-
         // Master Application Mock Database / Cohort Registry (Enriched with Outreach Timings and Overrides)
         let patientRegistry = [
             {
@@ -436,7 +422,10 @@
                 caoOffice: 'Philadelphia CAO - South',
                 dueDate: '2027-01-01',
                 outreachStatus: 'NOT_STARTED',
-                snomedCodes: ['28475009', '5602001'],
+                icdCodes: [
+                    { code: 'F33.2', desc: 'Major depressive disorder, recurrent, severe' },
+                    { code: 'F11.20', desc: 'Opioid dependence, uncomplicated' },
+                ],
                 utilization12mo: 0,
                 medCount: 3,
                 rationale: 'Active Severe Recurrent MDD & Substance Use (Opioid Dependence)',
@@ -458,7 +447,10 @@
                 caoOffice: 'Philadelphia CAO - West',
                 dueDate: '2026-12-15',
                 outreachStatus: 'PENDING_REPLY',
-                snomedCodes: ['185086009', '44054006'],
+                icdCodes: [
+                    { code: 'J44.9', desc: 'Chronic obstructive pulmonary disease, unspecified' },
+                    { code: 'E11.9', desc: 'Type 2 diabetes mellitus without complications' },
+                ],
                 utilization12mo: 3,
                 medCount: 12,
                 rationale: 'Severe COPD & Diabetes comorbid cluster with high emergency service utilization',
@@ -480,7 +472,7 @@
                 caoOffice: 'Delaware County CAO',
                 dueDate: '2026-11-30',
                 outreachStatus: 'COMPLETED_COMPASS',
-                snomedCodes: ['254837009'],
+                icdCodes: [{ code: 'C50.919', desc: 'Malignant neoplasm of breast, unspecified' }],
                 utilization12mo: 1,
                 medCount: 5,
                 rationale: 'Malignant Neoplasm of Breast undergoing Active Chemotherapy Protocol',
@@ -502,7 +494,7 @@
                 caoOffice: 'Philadelphia CAO - South',
                 dueDate: '2027-01-01',
                 outreachStatus: 'NOT_STARTED',
-                snomedCodes: ['432241000124101'],
+                icdCodes: [{ code: 'N18.6', desc: 'End-stage renal disease' }],
                 utilization12mo: 4,
                 medCount: 8,
                 rationale: 'End Stage Renal Disease (ESRD) with weekly hemodialysis schedule requirements',
@@ -524,7 +516,7 @@
                 caoOffice: 'Philadelphia CAO - West',
                 dueDate: '2027-01-15',
                 outreachStatus: 'NOT_STARTED',
-                snomedCodes: ['44054006'],
+                icdCodes: [{ code: 'E11.9', desc: 'Type 2 diabetes mellitus without complications' }],
                 utilization12mo: 1,
                 medCount: 2,
                 rationale: 'Isolated Type 2 Diabetes without physical/cognitive limitation indicators',
@@ -546,7 +538,7 @@
                 caoOffice: 'Delaware County CAO',
                 dueDate: '2026-12-01',
                 outreachStatus: 'NOT_STARTED',
-                snomedCodes: ['58214004'],
+                icdCodes: [{ code: 'F20.9', desc: 'Schizophrenia, unspecified' }],
                 utilization12mo: 0,
                 medCount: 4,
                 rationale: 'Schizophrenia (Disorder) with complex clinical management parameters',
@@ -568,7 +560,10 @@
                 caoOffice: 'Philadelphia CAO - South',
                 dueDate: '2027-01-01',
                 outreachStatus: 'PENDING_REPLY',
-                snomedCodes: ['185086009', '85232005'],
+                icdCodes: [
+                    { code: 'J44.9', desc: 'Chronic obstructive pulmonary disease, unspecified' },
+                    { code: 'I50.9', desc: 'Heart failure, unspecified' },
+                ],
                 utilization12mo: 2,
                 medCount: 11,
                 rationale: 'Heart Failure and COPD with severe physical restriction parameters',
@@ -584,7 +579,7 @@
         let currentFormPatientId = null;
         let currentFormTab = 'PA_MF';
         let currentFormRoleFilter = null;
-        let fhirViewTab = 'clinical'; // 'clinical' | 'forms'
+        let fhirViewTab = 'forms'; // legacy — unified forms view in fhir-workflow.js
         let currentSelectedPatientIdForOutreach = 'P101';
 
         // Signature Pad Draw Context
@@ -714,360 +709,29 @@
     </script>
 
     <script>
-        // Handler for updating manual checkbox selections directly on the form
-        function toggleFormCheckbox(patientId, type, isChecked) {
-            const patient = patientRegistry.find(p => p.id === patientId);
-            if (!patient) return;
-            
-            if (!patient.checkboxOverrides) {
-                patient.checkboxOverrides = {};
-            }
-            patient.checkboxOverrides[type] = isChecked;
-            showToast('Form Verification Updated', `Manual override applied for ${type.toUpperCase()}: ${isChecked ? 'Checked' : 'Unchecked'}.`, 'info');
-        }
-
-        // Dynamic compiler for isolated clinician app inside Simulated Epic
-        function renderFHIRAppContent(patient) {
-            const container = document.getElementById('fhir-app-viewport');
-            
-            let statusBadge = '';
-            if (patient.exemptionStatus === 'ELIGIBLE_TIER_1') {
-                statusBadge = `<span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-200 uppercase tracking-wider">Eligible: Tier 1 Auto-Exempt</span>`;
-            } else if (patient.exemptionStatus === 'ELIGIBLE_TIER_2') {
-                statusBadge = `<span class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1.5 rounded-full border border-amber-200 uppercase tracking-wider">Eligible: Tier 2 (Complex Comorbidities)</span>`;
-            } else if (patient.exemptionStatus === 'EXEMPT_COMPLETED') {
-                statusBadge = `<span class="bg-sky-100 text-sky-800 text-xs font-bold px-3 py-1.5 rounded-full border border-sky-200 uppercase tracking-wider">Exemption Certified &amp; Submitted</span>`;
-            } else {
-                statusBadge = `<span class="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-full border border-slate-200 uppercase tracking-wider">Unassessed</span>`;
-            }
-
-            // Determine check states incorporating active overrides
-            let s_smi = patient.checkboxOverrides?.smi !== undefined ? patient.checkboxOverrides.smi : false;
-            let s_sud = patient.checkboxOverrides?.sud !== undefined ? patient.checkboxOverrides.sud : false;
-            let s_oncology = patient.checkboxOverrides?.oncology !== undefined ? patient.checkboxOverrides.oncology : false;
-            let s_comorbidity = patient.checkboxOverrides?.comorbidity !== undefined ? patient.checkboxOverrides.comorbidity : false;
-
-            // If override isn't set, default to SNOMED mapping logic
-            let mappingRows = '';
-            patient.snomedCodes.forEach(code => {
-                const mapInfo = snomedIcdTranslationMap[code];
-                if (mapInfo) {
-                    if (['28475009', '58214004', '13746004'].includes(code) && patient.checkboxOverrides?.smi === undefined) s_smi = true;
-                    if (['5602001', '28743005'].includes(code) && patient.checkboxOverrides?.sud === undefined) s_sud = true;
-                    if (['254837009', '126852002', '432241000124101', '85232005'].includes(code) && patient.checkboxOverrides?.oncology === undefined) s_oncology = true;
-
-                    mappingRows += `
-                        <div class="flex flex-col bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1 text-xs">
-                            <div class="flex justify-between font-bold text-slate-700">
-                                <span>SNOMED-CT: ${mapInfo.somed || mapInfo.snomed}</span>
-                                <i class="fa-solid fa-arrow-right-long text-sky-600"></i>
-                                <span>ICD-10: ${mapInfo.icd}</span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2 text-[10px] text-slate-500">
-                                <p class="truncate">Concept: ${mapInfo.snomedDesc}</p>
-                                <p class="truncate text-right">Billing equivalence: ${mapInfo.icdDesc}</p>
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-
-            if (patient.exemptionStatus === 'ELIGIBLE_TIER_2' && patient.checkboxOverrides?.comorbidity === undefined) {
-                s_comorbidity = true;
-            }
-
-            const isFormCompleted = patient.exemptionStatus === 'EXEMPT_COMPLETED';
-
-            container.innerHTML = `
-                <div class="bg-slate-100 border border-slate-300 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex items-center space-x-2 text-slate-600 text-xs">
-                        <span class="bg-sky-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase">Clinician Workspace</span>
-                        <i class="fa-solid fa-angle-right"></i>
-                        <span>Medicaid Community Engagement Exemption Verification</span>
-                    </div>
-                    <span class="text-xs text-slate-500 font-medium">UMLS Translation Engine Active</span>
-                </div>
-
-                <div class="flex border-b border-slate-200 bg-white rounded-t-xl overflow-hidden">
-                    <button type="button" onclick="switchFhirTab('clinical')" class="px-5 py-3 text-xs font-semibold ${fhirViewTab === 'clinical' ? 'form-tab-active text-sky-700' : 'text-slate-500 hover:text-slate-700'}">
-                        <i class="fa-solid fa-stethoscope mr-1"></i> Clinical Overview &amp; Sign
-                    </button>
-                    <button type="button" onclick="switchFhirTab('forms')" class="px-5 py-3 text-xs font-semibold ${fhirViewTab === 'forms' ? 'form-tab-active text-sky-700' : 'text-slate-500 hover:text-slate-700'}">
-                        <i class="fa-solid fa-file-lines mr-1"></i> Form Package (Preview &amp; Pre-fill)
-                    </button>
-                </div>
-
-                <div id="fhir-forms-panel" class="${fhirViewTab === 'forms' ? '' : 'hidden'} space-y-6 mt-4">
-                    <div class="bg-sky-50 border border-sky-200 rounded-lg p-3 text-xs text-sky-900">
-                        <i class="fa-solid fa-circle-info mr-1"></i>
-                        Both DHS forms are pre-populated from EHR problem list, utilization metrics, and registry data. Edit fields, download fillable PDFs, or sign in the Clinical tab.
-                    </div>
-                    ${renderFormQuestionnaire(patient.id, 'PA_MF', { readonly: isFormCompleted })}
-                    ${renderFormQuestionnaire(patient.id, 'PA_1663', { readonly: isFormCompleted })}
-                </div>
-
-                <div id="fhir-clinical-panel" class="${fhirViewTab === 'clinical' ? '' : 'hidden'} mt-4">
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    
-                    <!-- Left Column: Patient clinical metrics, SNOMED translator -->
-                    <div class="lg:col-span-5 space-y-6">
-                        <!-- Clinical Insight Card -->
-                        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 overflow-hidden relative">
-                            <div class="absolute top-0 left-0 w-2 h-full bg-sky-600"></div>
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h3 class="text-xl font-extrabold text-slate-900">${patient.name}</h3>
-                                    <p class="text-xs text-slate-500">Medicaid ID: <span class="font-mono font-semibold">${patient.medicaidId}</span></p>
-                                </div>
-                                ${statusBadge}
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-100 text-xs">
-                                <div>
-                                    <span class="text-slate-400 block uppercase font-bold tracking-wider text-[10px]">County Office</span>
-                                    <span class="font-semibold text-slate-700">${patient.caoOffice}</span>
-                                </div>
-                                <div>
-                                    <span class="text-slate-400 block uppercase font-bold tracking-wider text-[10px]">State Redetermination Due</span>
-                                    <span class="font-semibold text-red-600">${new Date(patient.dueDate).toLocaleDateString('en-US')}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- SNOMED to ICD-10 Mapping -->
-                        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-                            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
-                                <h4 class="font-bold text-slate-900 text-xs flex items-center space-x-2">
-                                    <i class="fa-solid fa-arrows-spin text-sky-600 animate-spin"></i>
-                                    <span>EHR Problem List Translator</span>
-                                </h4>
-                                <span class="text-[10px] text-slate-400 font-mono">Clarity Mapping Pool</span>
-                            </div>
-                            <div class="space-y-3">
-                                <p class="text-xs text-slate-500">The state requires explicit ICD-10 codes to process ex-parte administrative exemptions, while Penn Medicine clinical notes utilize granular SNOMED codes. Real-time translation mappings below:</p>
-                                <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
-                                    ${mappingRows}
-                                </div>
-
-                                <!-- Tier 2 Metric Section (COPD/Util limits) -->
-                                ${patient.exemptionStatus === 'ELIGIBLE_TIER_2' ? `
-                                    <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 space-y-2 mt-4">
-                                        <p class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Tier 2 Comorbidity Risk Evaluation</p>
-                                        <div class="grid grid-cols-2 gap-2 text-xs">
-                                            <div class="bg-white p-2 rounded border border-slate-200">
-                                                <span class="text-slate-400 block text-[10px]">ED Encounters (12mo)</span>
-                                                <span class="text-base font-bold text-slate-800">${patient.utilization12mo} visits</span>
-                                            </div>
-                                            <div class="bg-white p-2 rounded border border-slate-200">
-                                                <span class="text-slate-400 block text-[10px]">Active Rx Count</span>
-                                                <span class="text-base font-bold text-slate-800">${patient.medCount} therapies</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Column: Interactive PA 1663 Attestation Form -->
-                    <div class="lg:col-span-7">
-                        <div class="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden flex flex-col h-full">
-                            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
-                                <div class="flex items-center space-x-2">
-                                    <i class="fa-regular fa-file-pdf text-rose-500 text-xl"></i>
-                                    <span class="font-bold text-sm">PA MEDICAL FRAILTY PROVIDER ATTESTATION FORM</span>
-                                </div>
-                                <span class="bg-emerald-600/20 text-emerald-400 text-[10px] font-bold px-3 py-1 rounded border border-emerald-500/30">Auto-Generated Draft</span>
-                            </div>
-
-                            <!-- Interactive Physical Document Simulation -->
-                            <div class="p-6 space-y-6 bg-slate-50 max-h-[500px] overflow-y-auto text-slate-700 leading-relaxed border-b border-slate-200 text-xs">
-                                
-                                <div class="text-center pb-4 border-b border-slate-300">
-                                    <h2 class="font-extrabold text-slate-900 text-sm">COMMONWEALTH OF PENNSYLVANIA • DEPARTMENT OF HUMAN SERVICES</h2>
-                                    <h3 class="text-[10px] tracking-wider font-bold text-slate-500 uppercase mt-1">Medical Frailty Self-Declaration and Provider Attestation</h3>
-                                </div>
-
-                                <div class="bg-slate-800 text-white p-2 text-[10px] font-bold rounded uppercase tracking-wider">
-                                    Section B: Licensed Provider Attestation of Impairment
-                                </div>
-
-                                <p class="text-[11px] text-slate-600">
-                                    This section must be completed and signed by a licensed physician, physician assistant, certified registered nurse practitioner (CRNP), or licensed psychologist. By completing this form, you certify that the patient's capacity to meet the standard 80-hour monthly work/community engagement requirement is significantly impaired.
-                                </p>
-
-                                <div class="grid grid-cols-3 gap-2 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                                    <div>
-                                        <span class="text-slate-400 block font-bold text-[10px]">Patient Name:</span>
-                                        <span class="font-semibold text-slate-800">${patient.name}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-slate-400 block font-bold text-[10px]">DOB:</span>
-                                        <span class="font-semibold text-slate-800">${patient.dob}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-slate-400 block font-bold text-[10px]">Medicaid ID:</span>
-                                        <span class="font-semibold text-slate-800 font-mono">${patient.medicaidId}</span>
-                                    </div>
-                                </div>
-
-                                <!-- Diagnostic Checkbox list (Fully editable based on overrides) -->
-                                <div class="space-y-3 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                                    <div class="flex justify-between items-center">
-                                        <p class="text-[10px] font-extrabold text-slate-900 uppercase tracking-wide">Automatic Mapped Clinical Impairments (Editable check-list)</p>
-                                        <span class="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">Manual Toggle Active</span>
-                                    </div>
-                                    
-                                    <div class="space-y-3 mt-2">
-                                        <label class="flex items-start space-x-3 text-xs cursor-pointer">
-                                            <input type="checkbox" id="chk-smi" onchange="toggleFormCheckbox('${patient.id}', 'smi', this.checked)" ${s_smi ? 'checked' : ''} ${isFormCompleted ? 'disabled' : ''} class="mt-0.5 rounded text-sky-600 h-4 w-4 border-slate-300">
-                                            <div>
-                                                <span class="font-bold text-slate-800 block">Severe Mental Illness (SMI)</span>
-                                                <span class="text-slate-500">Impairment stemming from diagnosed Serious Mental Illness (e.g. Schizophrenia, Bipolar, Recurrent Severe Major Depression).</span>
-                                            </div>
-                                        </label>
-                                        <label class="flex items-start space-x-3 text-xs cursor-pointer">
-                                            <input type="checkbox" id="chk-sud" onchange="toggleFormCheckbox('${patient.id}', 'sud', this.checked)" ${s_sud ? 'checked' : ''} ${isFormCompleted ? 'disabled' : ''} class="mt-0.5 rounded text-sky-600 h-4 w-4 border-slate-300">
-                                            <div>
-                                                <span class="font-bold text-slate-800 block">Substance Use Disorder (SUD)</span>
-                                                <span class="text-slate-500">Active participation in, or diagnosis with, severe substance use dependence requiring continuous medical supervision or rehabilitation.</span>
-                                            </div>
-                                        </label>
-                                        <label class="flex items-start space-x-3 text-xs cursor-pointer">
-                                            <input type="checkbox" id="chk-oncology" onchange="toggleFormCheckbox('${patient.id}', 'oncology', this.checked)" ${s_oncology ? 'checked' : ''} ${isFormCompleted ? 'disabled' : ''} class="mt-0.5 rounded text-sky-600 h-4 w-4 border-slate-300">
-                                            <div>
-                                                <span class="font-bold text-slate-800 block">Active Oncological / Severe Disease State</span>
-                                                <span class="text-slate-500">Malignant neoplasm under active treatment, or progressive organ failure (ESRD, Stage III/IV Heart Failure).</span>
-                                            </div>
-                                        </label>
-                                        <label class="flex items-start space-x-3 text-xs cursor-pointer">
-                                            <input type="checkbox" id="chk-comorbidity" onchange="toggleFormCheckbox('${patient.id}', 'comorbidity', this.checked)" ${s_comorbidity ? 'checked' : ''} ${isFormCompleted ? 'disabled' : ''} class="mt-0.5 rounded text-sky-600 h-4 w-4 border-slate-300">
-                                            <div>
-                                                <span class="font-bold text-slate-800 block">Tier 2 Comorbidities &amp; High Utilization Limits</span>
-                                                <span class="text-slate-500">Clinical judgment confirms physical or cognitive impairment caused by multiple co-occurring chronic illnesses.</span>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!-- Physician notes segment (Editable) -->
-                                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-2">
-                                    <div class="flex justify-between items-center">
-                                        <label for="form-physician-notes" class="block font-bold text-slate-800 uppercase tracking-wider text-[10px]">Clinical Justification Statement &amp; Notes</label>
-                                        <span class="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">Editable Field</span>
-                                    </div>
-                                    <textarea id="form-physician-notes" 
-                                              oninput="updatePhysicianNotes('${patient.id}', this.value)" 
-                                              rows="3" 
-                                              ${isFormCompleted ? 'disabled' : ''} 
-                                              class="w-full bg-slate-50 p-3 rounded border border-slate-300 text-slate-700 text-xs italic focus:bg-white focus:ring-sky-500 focus:border-sky-500 transition-colors duration-150 outline-none resize-none" 
-                                              placeholder="Enter custom clinical justifications for PA Medicaid ex-parte exemption...">${patient.physicianNotes}</textarea>
-                                </div>
-
-                                <div class="bg-amber-50 text-amber-900 border border-amber-200 rounded-lg p-3 text-[11px] flex items-start space-x-2">
-                                    <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm mt-0.5"></i>
-                                    <p>
-                                        <strong>Impairment Attestation:</strong> By applying my digital signature below, I certify under penalty of administrative review that the patient is physically or mentally impaired to the extent they cannot engage in 80 hours of monthly work/community service.
-                                    </p>
-                                </div>
-
-                                <!-- Provider Signature Box -->
-                                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-[10px] font-bold text-slate-800 uppercase tracking-wider flex items-center space-x-1">
-                                            <i class="fa-solid fa-pen-nib text-sky-600"></i>
-                                            <span>Authorized Provider Signature (Sign below)</span>
-                                        </span>
-                                        ${!isFormCompleted ? `
-                                            <button onclick="clearClinicianSignature()" class="text-rose-600 hover:text-rose-700 text-[10px] font-semibold hover:underline flex items-center space-x-1">
-                                                <i class="fa-solid fa-eraser"></i>
-                                                <span>Clear Pad</span>
-                                            </button>
-                                        ` : ''}
-                                    </div>
-                                    <div class="border border-slate-300 rounded bg-slate-50 h-28 relative overflow-hidden">
-                                        ${isFormCompleted ? `
-                                            <div class="absolute inset-0 bg-emerald-50 flex flex-col items-center justify-center text-emerald-800">
-                                                <i class="fa-solid fa-circle-check text-2xl mb-1 text-emerald-600"></i>
-                                                <span class="font-bold text-xs uppercase tracking-wide">Signature Authenticated &amp; Pushed to State</span>
-                                                <span class="text-[10px] text-emerald-600 code-font mt-0.5">EHR-REF: SIG_ENC_98824104</span>
-                                            </div>
-                                        ` : `
-                                            <canvas id="sig-pad-clinician" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
-                                            <div id="sig-pad-prompt" class="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-[10px]">
-                                                <span>Draw Signature with mouse, touch, or pen stylus</span>
-                                            </div>
-                                        `}
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-2 text-[10px]">
-                                        <div>
-                                            <span class="text-slate-400 block font-bold text-[9px] uppercase">Attesting Professional</span>
-                                            <span class="font-semibold text-slate-700">Siobhan Mita, MD (NPI: 188204901)</span>
-                                        </div>
-                                        <div>
-                                            <span class="text-slate-400 block font-bold text-[9px] uppercase">Clinical Specialty</span>
-                                            <span class="font-semibold text-slate-700">Penn Medicine Emergency Department</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>
-
-                            <!-- Submission Panel -->
-                            <div class="p-4 bg-slate-100 flex flex-col sm:flex-row gap-3">
-                                ${!isFormCompleted ? `
-                                    <button onclick="submitExemptionAttestation()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg shadow transition duration-150 flex items-center justify-center space-x-2 text-xs">
-                                        <i class="fa-solid fa-signature"></i>
-                                        <span>Sign &amp; Push to State HIO</span>
-                                    </button>
-                                    <button onclick="openPatientOutreachModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow transition duration-150 flex items-center justify-center space-x-2 text-xs">
-                                        <i class="fa-solid fa-paper-plane"></i>
-                                        <span>Patient Education Outreach</span>
-                                    </button>
-                                ` : `
-                                    <div class="w-full text-center py-2 text-emerald-800 font-bold text-xs bg-emerald-100/50 rounded-lg border border-emerald-200">
-                                        Form completed and processed on ${new Date().toLocaleDateString()}. Exemption finalized with PA DHS.
-                                    </div>
-                                `}
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-                </div>
-            `;
-        }
-    </script>
-
-    <script>
-        // Draw handler for clinician signatures
+        // Clinician signature pad (FHIR provider attestation)
         function initSignaturePad() {
             canvas = document.getElementById('sig-pad-clinician');
-            if (!canvas) return; // Ignore if patient form is already completed
+            if (!canvas) return;
 
             ctx = canvas.getContext('2d');
             handleCanvasResize();
 
-            ctx.strokeStyle = '#0284c7'; // Sky-600 color
+            ctx.strokeStyle = '#0284c7';
             ctx.lineWidth = 2.5;
             ctx.lineCap = 'round';
 
-            // Desktop events
             canvas.addEventListener('mousedown', startDrawing);
             canvas.addEventListener('mousemove', draw);
             canvas.addEventListener('mouseup', stopDrawing);
             canvas.addEventListener('mouseout', stopDrawing);
-
-            // Touch events
             canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                const touch = e.touches[0];
-                startDrawing(touch);
+                startDrawing(e.touches[0]);
             });
             canvas.addEventListener('touchmove', (e) => {
                 e.preventDefault();
-                const touch = e.touches[0];
-                draw(touch);
+                draw(e.touches[0]);
             });
             canvas.addEventListener('touchend', stopDrawing);
         }
@@ -1077,8 +741,6 @@
             const rect = canvas.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
-            
-            // Reapply settings because size changes reset canvas states
             ctx.strokeStyle = '#0284c7';
             ctx.lineWidth = 2.5;
             ctx.lineCap = 'round';
@@ -1108,7 +770,6 @@
             const rect = canvas.getBoundingClientRect();
             const clientX = e.clientX || (e.touches && e.touches[0].clientX);
             const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            
             return {
                 x: (clientX - rect.left) / (rect.right - rect.left) * canvas.width,
                 y: (clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
@@ -1118,47 +779,16 @@
         function clearClinicianSignature() {
             if (!canvas) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            document.getElementById('sig-pad-prompt').classList.remove('hidden');
+            const prompt = document.getElementById('sig-pad-prompt');
+            if (prompt) prompt.classList.remove('hidden');
         }
 
-        // Live state update for the clinical notes field to preserve changes during form signing/redrawing
-        function updatePhysicianNotes(patientId, value) {
-            const patient = patientRegistry.find(p => p.id === patientId);
-            if (patient) {
-                patient.physicianNotes = value;
-            }
-        }
-
-        // Finalize form and save state
+        /** @deprecated use fhirClinicianSignOff — kept for screenshot scripts */
         function submitExemptionAttestation() {
-            const patient = patientRegistry.find(p => p.id === currentPatientFHIRId);
-            if (!patient) return;
-
-            if (canvas) {
-                patient.signatureDataUrl = canvas.toDataURL('image/png');
-            }
-            const mfState = getFormState(patient.id, 'PA_MF');
-            mfState.providerSigned = true;
-            mfState.attestationDate = todayISO();
-
-            patient.isSigned = true;
-            patient.exemptionStatus = 'EXEMPT_COMPLETED';
-            patient.outreachStatus = 'COMPLETED_COMPASS';
-
-            showToast('DocumentReference Logged', 'EHR pre-populated form draft signed and saved in patient database.', 'info');
-            
-            setTimeout(() => {
-                showToast('HIO Transmission Confirmed', 'Exemption certified via P3N exchange directly to Pennsylvania DHS ex-parte systems.', 'success');
-                loadPatientContextInFHIR(currentPatientFHIRId);
-            }, 1200);
-        }
-
-        function switchFhirTab(tab) {
-            fhirViewTab = tab;
-            const patient = patientRegistry.find(p => p.id === currentPatientFHIRId);
-            if (patient) renderFHIRAppContent(patient);
+            fhirClinicianSignOff(currentPatientFHIRId, fhirFormState.activeFormId || 'PA_MF');
         }
     </script>
+
 
     <script>
         // Update dashboard KPIs (Refactored to exclude risk exposure amounts)

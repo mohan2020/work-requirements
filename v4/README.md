@@ -17,7 +17,7 @@ npx serve .
 | Mode | Audience | UI |
 |------|----------|-----|
 | **Independent staff dashboard** | CHWs, population health | Engage Vivid shell — worklist + 3-panel outreach drawer |
-| **SMART on FHIR (clinician)** | Providers in Epic | Simulated Epic chart + clinical attestation + form package |
+| **SMART on FHIR (clinician)** | Providers in Epic | Same exemption questionnaires as staff — pre-fill, save to chart, provider sign-off |
 
 Toggle via the bar at the top of the page.
 
@@ -68,17 +68,41 @@ Form drafts persist per patient in `localStorage` via `js/mapping-storage.js`.
 
 ---
 
+## SMART on FHIR (clinician)
+
+Uses the **same questionnaires** as the staff drawer (`FORM_SCHEMAS` + `form-engine.js`). No separate attestation UI.
+
+| Step | Action |
+|------|--------|
+| Open patient | CHW partial drafts load automatically (`applyDraftToFormState`) |
+| Review / edit | Medical Frailty or PA 1663 tab — all sections pre-filled from EHR + outreach |
+| Save to chart | `fhirSaveToChart()` — persists as finalized submission in `localStorage` |
+| Sign | Provider signature pad → `fhirClinicianSignOff()` — sets `patient.formWorkflow[formId].clinicianSigned` |
+| Staff sync | Worklist shows `85% · CHW draft`, `· in chart`, or `· signed` |
+
+**Patient signature (Section A) — TBD.** Patient self-declaration fields can be pre-filled during CHW outreach; capture workflow (wet ink, e-sign, in-clinic tablet) is deferred.
+
+Clinical context sidebar: patient summary + **ICD-10 problem list** (no SNOMED translation layer).
+
+---
+
+## Clinical data (ICD-10 only)
+
+Patients carry `icdCodes: [{ code, desc }, …]` on the problem list. Pre-fill, tier logic, and FHIR display use ICD-10 directly — there is no SNOMED-to-ICD mapping step.
+
+---
+
 ## Form field mapping wizard
 
 **`form-mapping-wizard.html`** — admin wizard for mapping official PDF AcroForm fields to EHR data.
 
 | Step | Purpose |
 |------|---------|
-| 1. EHR fields | Browse SMART-on-FHIR field catalog (demographics, contact, clinical, provider). Blue pills are **example values only**. |
+| 1. EHR fields | Browse SMART-on-FHIR field catalog. Blue pills are **example values only**. |
 | 2. Upload PDF | Full-size drop zone + bundled PA 1663 template |
-| 3. Map fields | Side-by-side PDF preview + readable mapping rows |
+| 3. Map fields | Click a PDF field chip → see PDF value → searchable EHR field dropdown (Manual / Skip options) |
 | 4. Preview | Sample filled PDF (Jane Doe demo data) |
-| 5. Save | Mapping versions (localStorage + IndexedDB for PDF blob) |
+| 5. Save | Full mapping summary table + version history (localStorage + IndexedDB for PDF blob) |
 
 Link from staff sidebar: **Form mapping**.
 
@@ -100,18 +124,30 @@ v4/
 │   └── mapping-wizard.css      # Wizard styles
 ├── js/
 │   ├── staff-workflow.js       # Engage worklist + 3-panel drawer
+│   ├── fhir-workflow.js        # SMART on FHIR — shared forms, chart save, sign-off
 │   ├── form-schemas.js         # PA_MF, PA_1663 questionnaires
-│   ├── form-engine.js          # Pre-fill, render, state
+│   ├── form-engine.js          # Pre-fill, render, state (ICD-10 problem list)
 │   ├── mapping-storage.js      # Mapping versions + per-patient drafts
 │   ├── ehr-field-catalog.js    # EHR field catalog for wizard
-│   ├── mapping-wizard.js       # Wizard logic
+│   ├── mapping-wizard.js       # Wizard logic (click-to-map UI)
 │   ├── pa-1663-field-map.js    # App → PA 1663 AcroForm names
 │   ├── form-field-mapper.js    # Gap analysis for form-mapping.html
 │   └── pdf-export.js           # Official PDF fill only
 └── assets/
     ├── forms-manifest.json
-    └── form-field-inventory.json
+    ├── form-field-inventory.json
+    └── w2h-mark-white.svg
 ```
+
+---
+
+## Shared form state
+
+Staff and FHIR read/write the same in-memory + `localStorage` form state:
+
+- `getFormState(patientId, formId)` — single source of truth
+- CHW **Save partial draft** → FHIR loads on patient open
+- Clinician **Save to chart** / **Sign** → staff worklist reflects status via `patient.formWorkflow`
 
 ---
 
@@ -120,7 +156,7 @@ v4/
 ```bash
 cd prototype/v4
 npx serve .
-npx vercel
+npx vercel deploy --prod   # vercel.json serves full static site (not index.html only)
 ```
 
 ## Related docs
