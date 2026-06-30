@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Field Mapping — PA Medicaid Exemption Workspace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .status-mapped { background: #ecfdf5; color: #065f46; }
+        .status-system { background: #eff6ff; color: #1e40af; }
+        .status-manual { background: #fef3c7; color: #92400e; }
+        .status-unmapped_pdf { background: #fef2f2; color: #991b1b; }
+        .status-skip { background: #f1f5f9; color: #64748b; }
+        .status-app_only { background: #f5f3ff; color: #5b21b6; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+    <header class="bg-slate-900 text-white border-b-4 border-sky-600 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <a href="index.html" class="text-sky-400 hover:text-sky-300 text-xs font-semibold inline-flex items-center gap-1 mb-1">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Exemption Workspace
+                </a>
+                <h1 class="text-xl font-bold">Official Form Field Mapping</h1>
+                <p class="text-sm text-slate-400 mt-0.5">One-time admin review — compare app questionnaires to official DHS PDF AcroForm fields</p>
+            </div>
+            <button id="btn-rescan" onclick="runFullScan()" class="bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold px-4 py-2 rounded-lg flex items-center gap-2">
+                <i class="fa-solid fa-rotate"></i> Re-scan templates in assets/
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-6">
+
+        <!-- How to add a new form -->
+        <section class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <h2 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-circle-info text-sky-600"></i> Adding a new official form
+            </h2>
+            <ol class="mt-3 text-xs text-slate-600 space-y-1.5 list-decimal list-inside">
+                <li>Drop the official DHS PDF into <code class="mono bg-slate-100 px-1 rounded">assets/</code> (e.g. <code class="mono bg-slate-100 px-1 rounded">PA_Medical_Frailty_official.pdf</code>)</li>
+                <li>Add an entry to <code class="mono bg-slate-100 px-1 rounded">assets/forms-manifest.json</code> with <code class="mono">templatePath</code> and <code class="mono">schemaId</code></li>
+                <li>Add questionnaire fields in <code class="mono bg-slate-100 px-1 rounded">js/form-schemas.js</code> if needed</li>
+                <li>Add <code class="mono">appToPdf</code> mappings in <code class="mono bg-slate-100 px-1 rounded">js/pa-*-field-map.js</code> and register in <code class="mono">js/form-field-mapper.js</code></li>
+                <li>Click <strong>Re-scan</strong> on this page — unmapped PDF fields and app-only fields will appear below</li>
+            </ol>
+        </section>
+
+        <div id="scan-status" class="text-xs text-slate-500 mono"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Form list sidebar -->
+            <aside class="lg:col-span-3 space-y-2" id="form-list"></aside>
+
+            <!-- Detail panel -->
+            <div class="lg:col-span-9 space-y-6" id="form-detail">
+                <p class="text-sm text-slate-500">Loading manifest…</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/form-schemas.js"></script>
+    <script src="js/pa-1663-field-map.js"></script>
+    <script src="js/form-field-mapper.js"></script>
+    <script>
+        let scanData = null;
+        let selectedFormId = null;
+
+        function statusBadge(status) {
+            const labels = {
+                mapped: 'Mapped',
+                system: 'Auto-fill',
+                manual: 'Manual',
+                unmapped_pdf: 'PDF unmapped',
+                skip: 'Admin/skip',
+                app_only: 'App only',
+                app_mapped_pdf_missing: 'Mapping error',
+            };
+            return `<span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded status-${status}">${labels[status] || status}</span>`;
+        }
+
+        function renderFormList() {
+            const el = document.getElementById('form-list');
+            if (!scanData) return;
+            el.innerHTML = scanData.results.map(({ entry, report, error }) => {
+                const active = selectedFormId === entry.id ? 'ring-2 ring-sky-500 bg-sky-50' : 'bg-white hover:bg-slate-50';
+                const badge = entry.templatePath
+                    ? `<span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">PDF</span>`
+                    : `<span class="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">No PDF</span>`;
+                const warn = report?.stats?.unmappedPdf > 0
+                    ? `<span class="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-bold">${report.stats.unmappedPdf} gaps</span>`
+                    : '';
+                return `
+                <button type="button" onclick="selectForm('${entry.id}')"
+                    class="w-full text-left border border-slate-200 rounded-xl p-4 transition ${active}">
+                    <div class="flex items-center gap-2 mb-1">${badge}${warn}</div>
+                    <p class="font-bold text-sm text-slate-900">${entry.title}</p>
+                    <p class="text-[10px] text-slate-500 mono mt-1">${entry.id}</p>
+                    ${error ? `<p class="text-[10px] text-rose-600 mt-1">${error}</p>` : ''}
+                </button>`;
+            }).join('');
+        }
+
+        function selectForm(id) {
+            selectedFormId = id;
+            renderFormList();
+            renderFormDetail();
+        }
+
+        function renderFormDetail() {
+            const el = document.getElementById('form-detail');
+            const item = scanData?.results.find((r) => r.entry.id === selectedFormId);
+            if (!item) {
+                el.innerHTML = '<p class="text-sm text-slate-500">Select a form from the list.</p>';
+                return;
+            }
+            const { entry, report, pdfFields, error } = item;
+            if (error || !report) {
+                el.innerHTML = `<div class="bg-rose-50 border border-rose-200 rounded-xl p-6 text-sm text-rose-800">${error || 'No report'}</div>`;
+                return;
+            }
+            const s = report.stats;
+            const pdfPreview = entry.templatePath
+                ? `<iframe src="${entry.templatePath}" class="w-full h-[420px] border border-slate-300 rounded-lg bg-white" title="Official PDF preview"></iframe>
+                   <a href="${entry.templatePath}" target="_blank" class="text-xs text-sky-600 hover:underline mt-2 inline-block"><i class="fa-solid fa-external-link mr-1"></i>Open PDF in new tab</a>`
+                : `<div class="bg-amber-50 border border-amber-200 rounded-lg p-6 text-sm text-amber-900">
+                    <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                    No template in assets/. ${entry.notes || 'Add official PDF and update forms-manifest.json.'}
+                   </div>`;
+
+            el.innerHTML = `
+                <section class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <div class="flex flex-wrap justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-bold">${entry.title}</h2>
+                            <p class="text-xs text-slate-500 mt-1">Schema: <span class="mono">${report.schemaId}</span>
+                                ${entry.templatePath ? ` · Template: <span class="mono">${entry.templatePath}</span>` : ''}</p>
+                            ${entry.officialUrl ? `<a href="${entry.officialUrl}" target="_blank" class="text-xs text-sky-600 hover:underline">Official DHS reference ↗</a>` : ''}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                        <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                            <p class="text-[10px] uppercase text-slate-400 font-bold">PDF fields</p>
+                            <p class="text-2xl font-extrabold">${s.pdfTotal}</p>
+                        </div>
+                        <div class="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                            <p class="text-[10px] uppercase text-emerald-700 font-bold">Mapped to app</p>
+                            <p class="text-2xl font-extrabold text-emerald-800">${s.mapped}</p>
+                        </div>
+                        <div class="bg-rose-50 rounded-lg p-3 border border-rose-200">
+                            <p class="text-[10px] uppercase text-rose-700 font-bold">PDF gaps</p>
+                            <p class="text-2xl font-extrabold text-rose-800">${s.unmappedPdf}</p>
+                        </div>
+                        <div class="bg-violet-50 rounded-lg p-3 border border-violet-200">
+                            <p class="text-[10px] uppercase text-violet-700 font-bold">App-only fields</p>
+                            <p class="text-2xl font-extrabold text-violet-800">${s.appOnly}</p>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-3">
+                        Also: ${s.system} auto-filled · ${s.manual} manual signature/SSN · ${s.skip} admin skipped ·
+                        ${s.appRequired} required app inputs
+                    </p>
+                </section>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <section class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                        <h3 class="font-bold text-sm mb-3"><i class="fa-regular fa-file-pdf text-rose-500 mr-1"></i> Official PDF preview</h3>
+                        ${pdfPreview}
+                    </section>
+                    <section class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm overflow-hidden">
+                        <h3 class="font-bold text-sm mb-3"><i class="fa-solid fa-table mr-1 text-sky-600"></i> What the app fills vs what the PDF needs</h3>
+                        <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
+                            <table class="w-full text-xs">
+                                <thead class="bg-slate-100 sticky top-0">
+                                    <tr>
+                                        <th class="text-left p-2 font-bold">PDF field (official)</th>
+                                        <th class="text-left p-2 font-bold">Type</th>
+                                        <th class="text-left p-2 font-bold">App field</th>
+                                        <th class="text-left p-2 font-bold">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${report.rows.map((r) => `
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="p-2 mono text-[10px]">${r.pdfField}</td>
+                                        <td class="p-2 text-slate-500">${r.pdfType}</td>
+                                        <td class="p-2">
+                                            <span class="mono text-[10px] block">${r.appFieldId || '—'}</span>
+                                            <span class="text-[10px] text-slate-500">${r.appLabel !== '—' ? r.appLabel.substring(0, 60) + (r.appLabel.length > 60 ? '…' : '') : ''}</span>
+                                        </td>
+                                        <td class="p-2">${statusBadge(r.status)}<p class="text-[10px] text-slate-500 mt-0.5">${r.note}</p></td>
+                                    </tr>`).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                ${report.appOnly.length ? `
+                <section class="bg-white border border-violet-200 rounded-xl p-5 shadow-sm">
+                    <h3 class="font-bold text-sm text-violet-900 mb-3"><i class="fa-solid fa-list-check mr-1"></i> App questionnaire fields not exported to PDF</h3>
+                    <table class="w-full text-xs">
+                        <thead class="bg-violet-50">
+                            <tr>
+                                <th class="text-left p-2 font-bold">App field</th>
+                                <th class="text-left p-2 font-bold">Section</th>
+                                <th class="text-left p-2 font-bold">Required</th>
+                                <th class="text-left p-2 font-bold">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${report.appOnly.map((a) => `
+                            <tr>
+                                <td class="p-2"><span class="mono">${a.appFieldId}</span><br><span class="text-slate-600">${a.appLabel.substring(0, 80)}</span></td>
+                                <td class="p-2 text-slate-500">${a.section}</td>
+                                <td class="p-2">${a.required ? 'Yes' : 'No'}</td>
+                                <td class="p-2">${statusBadge(a.status)}<p class="text-[10px] text-slate-500 mt-0.5">${a.note}</p></td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </section>` : ''}
+            `;
+        }
+
+        async function runFullScan() {
+            const btn = document.getElementById('btn-rescan');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scanning…';
+            document.getElementById('scan-status').textContent = 'Reading assets/forms-manifest.json and analyzing PDF AcroForm fields…';
+            try {
+                scanData = await analyzeAllFormsFromManifest();
+                if (!selectedFormId && scanData.results.length) {
+                    selectedFormId = scanData.results[0].entry.id;
+                }
+                document.getElementById('scan-status').textContent = `Last scan: ${new Date(scanData.scannedAt).toLocaleString()} · ${scanData.results.length} form(s) in manifest`;
+                renderFormList();
+                renderFormDetail();
+            } catch (err) {
+                document.getElementById('form-detail').innerHTML = `<div class="bg-rose-50 border border-rose-200 rounded-xl p-6 text-sm text-rose-800">
+                    Scan failed: ${err.message}. Run via a local server (<code>npx serve .</code>) so fetch() can load assets.
+                </div>`;
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Re-scan templates in assets/';
+        }
+
+        runFullScan();
+    </script>
+</body>
+</html>

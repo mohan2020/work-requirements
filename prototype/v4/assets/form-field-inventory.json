@@ -1,0 +1,168 @@
+{
+  "scannedAt": "2026-06-26T16:57:30.631Z",
+  "forms": {
+    "PA_1663": {
+      "templatePath": "assets/PA_1663_official.pdf",
+      "fieldCount": 38,
+      "fields": [
+        {
+          "name": "CO",
+          "type": "TextField"
+        },
+        {
+          "name": "RECORD NUMBER",
+          "type": "TextField"
+        },
+        {
+          "name": "CAT",
+          "type": "TextField"
+        },
+        {
+          "name": "CSLD",
+          "type": "TextField"
+        },
+        {
+          "name": "DIST",
+          "type": "TextField"
+        },
+        {
+          "name": "RECORD NAME",
+          "type": "TextField"
+        },
+        {
+          "name": "DATE",
+          "type": "TextField"
+        },
+        {
+          "name": "WORKER",
+          "type": "TextField"
+        },
+        {
+          "name": "NAME",
+          "type": "TextField"
+        },
+        {
+          "name": "BIRTHDATE",
+          "type": "TextField"
+        },
+        {
+          "name": "ADDRESS",
+          "type": "TextField"
+        },
+        {
+          "name": "TELEPHONE NUMBER",
+          "type": "TextField"
+        },
+        {
+          "name": "CITY",
+          "type": "TextField"
+        },
+        {
+          "name": "STATE",
+          "type": "TextField"
+        },
+        {
+          "name": "ZIP CODE",
+          "type": "TextField"
+        },
+        {
+          "name": "CAO NAME AND ADDRESS",
+          "type": "TextField"
+        },
+        {
+          "name": "RETURN TO:",
+          "type": "TextField"
+        },
+        {
+          "name": "RESET",
+          "type": "Button"
+        },
+        {
+          "name": "SIGNATURE PUBLIC ASSISTANCE APPLICANTRECIPIENT",
+          "type": "Signature"
+        },
+        {
+          "name": "PRINT NAME",
+          "type": "TextField"
+        },
+        {
+          "name": "DATE_2",
+          "type": "TextField"
+        },
+        {
+          "name": "SECTION II To be completed by a licensed physician physicians assistant certified registered nurse practitioner or psychologist",
+          "type": "TextField"
+        },
+        {
+          "name": "EMPLOYABILITY Check only one",
+          "type": "TextField"
+        },
+        {
+          "name": "DATE_3",
+          "type": "TextField"
+        },
+        {
+          "name": "undefined",
+          "type": "TextField"
+        },
+        {
+          "name": "DATE_4",
+          "type": "TextField"
+        },
+        {
+          "name": "undefined_2",
+          "type": "TextField"
+        },
+        {
+          "name": "OTHER Specify",
+          "type": "TextField"
+        },
+        {
+          "name": "E",
+          "type": "TextField"
+        },
+        {
+          "name": "MEDICAL PROVIDER PRINT NAME",
+          "type": "TextField"
+        },
+        {
+          "name": "TELEPHONE NO",
+          "type": "TextField"
+        },
+        {
+          "name": "ADDRESS_2",
+          "type": "TextField"
+        },
+        {
+          "name": "SIGNATURE",
+          "type": "Signature"
+        },
+        {
+          "name": "MEDICAL ASSISTANCE PROVIDER NO",
+          "type": "TextField"
+        },
+        {
+          "name": "DATE_5",
+          "type": "TextField"
+        },
+        {
+          "name": "SSN 1",
+          "type": "TextField"
+        },
+        {
+          "name": "SSN 2",
+          "type": "TextField"
+        },
+        {
+          "name": "SSN 3",
+          "type": "TextField"
+        }
+      ]
+    },
+    "PA_MF": {
+      "templatePath": null,
+      "fields": [],
+      "note": "Drop official PDF as assets/PA_Medical_Frailty_official.pdf and set templatePath, then re-scan."
+    }
+  }
+}

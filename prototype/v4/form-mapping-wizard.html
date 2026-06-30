@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Form Mapping Wizard — PA Medicaid Exemption</title>
+  <link rel="stylesheet" href="css/mapping-wizard.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+  <div class="wizard-app">
+    <aside class="wizard-sidebar">
+      <div class="wizard-brand">
+        <div class="mark">W2H</div>
+        <div>
+          <h1>Form mapping</h1>
+          <p>PA Medicaid exemption</p>
+        </div>
+      </div>
+      <nav class="wizard-nav" id="wizard-nav"></nav>
+      <div class="wizard-sidebar-footer">
+        <a href="index.html">← Back to exemption workspace</a>
+      </div>
+    </aside>
+
+    <div class="wizard-main">
+      <header class="wizard-topbar">
+        <h2 id="wizard-title">EHR fields</h2>
+        <span class="sub" id="wizard-subtitle"></span>
+      </header>
+
+      <div class="wizard-content" id="wizard-step-host"></div>
+
+      <footer class="wizard-footer">
+        <button type="button" class="btn secondary" id="btn-prev" onclick="prevStep()">Back</button>
+        <span class="hint">Mappings save locally in your browser for this prototype.</span>
+        <button type="button" class="btn primary" id="btn-next">Continue</button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="js/ehr-field-catalog.js"></script>
+  <script src="js/mapping-storage.js"></script>
+  <script src="js/form-field-mapper.js"></script>
+  <script src="js/mapping-wizard.js"></script>
+</body>
+</html>
