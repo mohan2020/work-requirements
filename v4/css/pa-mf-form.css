@@ -1,0 +1,394 @@
+/* Medical Frailty HTML form — document shell aligned with official-pdf-viewer */
+.staff-html-form-host,
+.fhir-html-form-host {
+  margin-bottom: 14px;
+  min-width: 0;
+}
+
+.pa-mf-form-shell {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--radius, 8px);
+  background: var(--card, #fff);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pa-mf-form-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--accent, #f1f5f9);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  flex-wrap: wrap;
+}
+
+.pa-mf-form-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.pa-mf-form-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.pa-mf-form-badge--draft {
+  background: #ede9fe;
+  color: #6d28d9;
+  border-color: #c4b5fd;
+}
+
+.pa-mf-form-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--heading, #0f172a);
+}
+
+.pa-mf-form-pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: #047857;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.pa-mf-form-scroll {
+  max-height: min(58vh, 640px);
+  min-height: 380px;
+  overflow: auto;
+  background: #525659;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.fhir-html-form-host .pa-mf-form-scroll {
+  max-height: min(62vh, 720px);
+}
+
+.pa-mf-form-page {
+  margin: 16px auto;
+  width: min(100% - 32px, 680px);
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  padding: 32px 36px 40px;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #1e293b;
+}
+
+.pa-mf-form-header {
+  text-align: center;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+  border-bottom: 2px solid #1e293b;
+}
+
+.pa-mf-form-header h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #0f172a;
+}
+
+.pa-mf-form-header h3 {
+  margin: 6px 0 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.pa-mf-form-notice {
+  margin: 0 0 16px;
+  padding: 8px 10px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.pa-mf-section-banner {
+  margin: 20px 0 10px;
+  padding: 6px 10px;
+  background: #1e293b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.pa-mf-section-banner:first-of-type {
+  margin-top: 0;
+}
+
+.pa-mf-section-desc {
+  margin: 0 0 12px;
+  font-size: 10px;
+  color: #475569;
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+}
+
+.pa-mf-field-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.pa-mf-field-row--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.pa-mf-field {
+  margin-bottom: 12px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.pa-mf-field label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 3px;
+}
+
+.pa-mf-field label .req {
+  color: #dc2626;
+}
+
+.pa-mf-field input[type="text"],
+.pa-mf-field input[type="tel"],
+.pa-mf-field input[type="email"],
+.pa-mf-field input[type="date"],
+.pa-mf-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  border-bottom: 1px solid #94a3b8;
+  background: #f8fafc;
+  padding: 4px 2px;
+  font-size: 11px;
+  color: #0f172a;
+  font-family: Helvetica, Arial, sans-serif;
+  border-radius: 0;
+}
+
+.pa-mf-field input:focus,
+.pa-mf-field textarea:focus {
+  outline: none;
+  border-bottom-color: #0284c7;
+  background: #fff;
+  box-shadow: inset 0 -2px 0 #0284c7;
+}
+
+.pa-mf-field input:disabled,
+.pa-mf-field textarea:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.pa-mf-field textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 2px;
+  padding: 6px 8px;
+  resize: vertical;
+  min-height: 56px;
+  line-height: 1.4;
+}
+
+.pa-mf-field textarea:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 1px #0284c7;
+}
+
+.pa-mf-checklist {
+  border: 1px solid #cbd5e1;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: #fafafa;
+}
+
+.pa-mf-checklist-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #334155;
+  margin: 0 0 10px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.pa-mf-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.pa-mf-check-item:last-child {
+  margin-bottom: 0;
+}
+
+.pa-mf-check-item input[type="checkbox"] {
+  margin-top: 2px;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  accent-color: #0284c7;
+}
+
+.pa-mf-check-item strong {
+  display: block;
+  font-size: 11px;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.pa-mf-check-item span {
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.pa-mf-attestation-box {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  font-size: 10px;
+  color: #78350f;
+  line-height: 1.5;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.pa-mf-cert-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  cursor: pointer;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.pa-mf-cert-check input {
+  margin-top: 2px;
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.pa-mf-form-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--light-navy-5, #f8fafc);
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+
+.pa-mf-form-footer button {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pa-mf-form-footer button:hover {
+  background: #f1f5f9;
+}
+
+.pa-mf-form-footer button.pa-mf-btn-print {
+  background: #1e293b;
+  color: #fff;
+  border-color: #1e293b;
+}
+
+.pa-mf-form-footer button.pa-mf-btn-print:hover {
+  background: #334155;
+}
+
+.pa-mf-form-footer button.pa-mf-btn-reset {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.pa-mf-form-hint {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted-foreground, #64748b);
+  background: var(--light-navy-5, #f8fafc);
+  border-top: 1px solid var(--border, #e2e8f0);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+@media (max-width: 560px) {
+  .pa-mf-form-page {
+    padding: 20px 16px 28px;
+  }
+  .pa-mf-field-row,
+  .pa-mf-field-row--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .pa-mf-form-toolbar,
+  .pa-mf-form-footer,
+  .pa-mf-form-hint {
+    display: none !important;
+  }
+  .pa-mf-form-scroll {
+    max-height: none;
+    overflow: visible;
+    background: #fff;
+  }
+  .pa-mf-form-page {
+    box-shadow: none;
+    margin: 0;
+    width: 100%;
+    padding: 0;
+  }
+}

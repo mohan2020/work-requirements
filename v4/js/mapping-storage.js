@@ -22,6 +22,16 @@ function saveJson(key, data) {
   localStorage.setItem(key, JSON.stringify(data));
 }
 
+function syncMappingsToRemote() {
+  if (typeof isAdminContext === 'function' && !isAdminContext()) return;
+  if (typeof queueRemoteSync !== 'function' || typeof pushRemoteMappings !== 'function') return;
+  queueRemoteSync(() => pushRemoteMappings(getAllMappings()), 'mappings');
+}
+
+function syncSubmissionsToRemote() {
+  /* CHW drafts stay local — only explicit Submit for review uploads to server */
+}
+
 /* ── Mapping versions ── */
 
 function getAllMappings() {
@@ -77,6 +87,7 @@ function saveMappingVersion(payload) {
   }
 
   saveJson(WR_STORAGE.mappingsKey, store);
+  syncMappingsToRemote();
   return existing || store.items[0];
 }
 
@@ -85,6 +96,7 @@ function setActiveMapping(id) {
   if (store.items.some((m) => m.id === id)) {
     store.activeId = id;
     saveJson(WR_STORAGE.mappingsKey, store);
+    syncMappingsToRemote();
   }
 }
 
@@ -93,6 +105,7 @@ function deleteMapping(id) {
   store.items = store.items.filter((m) => m.id !== id);
   if (store.activeId === id) store.activeId = store.items[0]?.id || null;
   saveJson(WR_STORAGE.mappingsKey, store);
+  syncMappingsToRemote();
 }
 
 function restoreMappingVersion(mappingId, historyIndex) {
@@ -118,33 +131,61 @@ function openPdfDb() {
   });
 }
 
-async function storePdfBlob(mappingId, arrayBuffer) {
+async function storePdfBlob(mappingId, arrayBuffer, options = {}) {
+  const { skipRemote = false } = options;
+  let stored = false;
   try {
     const db = await openPdfDb();
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       const tx = db.transaction(WR_STORAGE.pdfStoreName, 'readwrite');
       tx.objectStore(WR_STORAGE.pdfStoreName).put(arrayBuffer, mappingId);
       tx.oncomplete = () => resolve(true);
       tx.onerror = () => reject(tx.error);
     });
+    stored = true;
   } catch (err) {
     console.warn('IndexedDB unavailable for PDF storage', err);
-    return false;
   }
+
+  if (!skipRemote && typeof uploadRemotePdfTemplate === 'function' && typeof isRemoteStorageEnabled === 'function' && isRemoteStorageEnabled()) {
+    try {
+      await uploadRemotePdfTemplate(mappingId, arrayBuffer);
+      stored = true;
+    } catch (err) {
+      console.warn('Remote PDF template upload failed', err);
+    }
+  }
+
+  return stored;
 }
 
 async function getPdfBlob(mappingId) {
   try {
     const db = await openPdfDb();
-    return new Promise((resolve, reject) => {
+    const local = await new Promise((resolve, reject) => {
       const tx = db.transaction(WR_STORAGE.pdfStoreName, 'readonly');
       const req = tx.objectStore(WR_STORAGE.pdfStoreName).get(mappingId);
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     });
+    if (local) return local;
   } catch {
-    return null;
+    /* fall through to remote */
   }
+
+  if (typeof downloadRemotePdfTemplate === 'function' && typeof isRemoteStorageEnabled === 'function' && isRemoteStorageEnabled()) {
+    try {
+      const remote = await downloadRemotePdfTemplate(mappingId);
+      if (remote) {
+        await storePdfBlob(mappingId, remote, { skipRemote: true });
+        return remote;
+      }
+    } catch (err) {
+      console.warn('Remote PDF template fetch failed', err);
+    }
+  }
+
+  return null;
 }
 
 /* ── Per-patient form submissions ── */
@@ -188,6 +229,7 @@ function saveFormSubmission(patientId, formId, state, meta = {}) {
   /* Cap history per patient */
   all[patientId] = all[patientId].slice(0, 50);
   saveJson(WR_STORAGE.submissionsKey, all);
+  syncSubmissionsToRemote();
   return entry;
 }
 
@@ -199,6 +241,7 @@ function finalizeFormSubmission(patientId, formId) {
     draft.meta.isDraft = false;
     draft.meta.finalizedAt = new Date().toISOString();
     saveJson(WR_STORAGE.submissionsKey, all);
+    syncSubmissionsToRemote();
   }
   return draft;
 }

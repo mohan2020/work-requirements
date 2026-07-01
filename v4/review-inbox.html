@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review inbox — PA Medicaid Exemption</title>
+  <link rel="stylesheet" href="css/engage/kit.css">
+  <link rel="stylesheet" href="css/staff-engage.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body style="margin:0;background:var(--background,#f4f6f9);font-family:var(--font-sans,Inter,sans-serif)">
+  <div style="max-width:960px;margin:0 auto;padding:24px 20px 48px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+      <div>
+        <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-foreground)">Admin</p>
+        <h1 style="margin:4px 0 0;font-size:22px;color:var(--heading)">CHW review inbox</h1>
+        <p style="margin:6px 0 0;font-size:13px;color:var(--muted-foreground)">Submissions from <strong>Submit for review</strong> in the staff outreach drawer.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="index.html" class="btn secondary sm" style="text-decoration:none">← Workspace</a>
+        <button type="button" class="btn secondary sm" onclick="location.reload()">Refresh</button>
+      </div>
+    </div>
+    <div id="review-inbox-host"></div>
+  </div>
+
+  <script src="js/remote-storage.js"></script>
+  <script src="js/review-inbox.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      renderReviewInbox(document.getElementById('review-inbox-host'));
+      if (window.lucide) lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

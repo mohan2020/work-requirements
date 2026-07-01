@@ -64,7 +64,7 @@ The staff dashboard uses the **Engage Vivid** design system (`css/engage/kit.css
 5. **Exemption forms** *(if reached = Yes)* — form dropdown; when an official DHS PDF exists (PA 1663), the **official form is shown inline** with EHR-mapped fields pre-filled — not HTML inputs. Staff complete remaining fields and signatures on the PDF, then save or download. Medical Frailty stays HTML until DHS publishes an official PDF.
 6. **Log attempt** *(if reached = No)* — next outreach date + notes → updates worklist
 
-Form drafts persist per patient in `localStorage` via `js/mapping-storage.js`.
+Form drafts persist per patient in the browser. On the deployed app, CHWs tap **Submit for review** to send a PDF to the admin inbox (see below).
 
 ---
 
@@ -157,9 +157,39 @@ Staff and FHIR read/write the same in-memory + `localStorage` form state:
 
 ```bash
 cd prototype/v4
-npx serve .
-npx vercel deploy --prod   # vercel.json serves full static site (not index.html only)
+npx serve .                    # static only — shared workspace API unavailable
+vercel dev                     # static + /api workspace routes locally
+npx vercel deploy --prod       # vercel.json serves v4 + API routes
 ```
+
+## CHW review workflow (Vercel Blob)
+
+Designed for non-technical testers — **no settings or tokens for CHWs**.
+
+### You (admin) — one-time setup
+
+1. Vercel → **Storage** → create **Blob** store → connect to this project
+2. Set env vars and redeploy:
+   - `WR_ADMIN_VIEW_KEY` — secret for the review inbox URL
+   - `WR_DEMO_MODE=1` — allows publishing mappings from the wizard without a client token (prototype only)
+   - Optional: `WR_SHARED_TOKEN` if you prefer token-protected mapping publish
+3. Publish the field mapping: open `form-mapping-wizard.html?admin=1` (add `&token=…` if using `WR_SHARED_TOKEN`), save mapping
+4. Bookmark the inbox: `review-inbox.html?key=YOUR_WR_ADMIN_VIEW_KEY`
+
+Share with CHWs: **only the main app URL** (`index.html` on your Vercel deploy).
+
+### CHW flow (zero config)
+
+1. Open the worklist link you send them
+2. Complete outreach + form (mapping loads automatically from server)
+3. Enter **their name** once
+4. Tap **Submit for review** → “Thank you”
+
+### Admin inbox
+
+Open your bookmarked `review-inbox.html?key=…` to see who submitted what and open each PDF.
+
+> Synthetic demo patients only on public deploys. Do not store real PHI.
 
 ## Related docs
 

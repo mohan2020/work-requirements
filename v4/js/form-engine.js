@@ -265,6 +265,7 @@ function handleFormFieldChange(patientId, formId, fieldId, el) {
     value = el.value;
   } else value = el.value;
   saveFormField(patientId, formId, fieldId, value);
+  if (typeof updatePaMfFormProgress === 'function') updatePaMfFormProgress(patientId, formId);
   if (typeof updateFormCompletionBadge === 'function') updateFormCompletionBadge(patientId);
 }
 
@@ -274,9 +275,14 @@ function resetFormPrefill(patientId, formId) {
   if (container) {
     container.innerHTML = renderFormQuestionnaire(patientId, formId, { roleFilter: currentFormRoleFilter });
     showToast('Form Reset', 'Questionnaire re-populated from EHR clinical data.', 'info');
+  } else if (typeof refreshMedicalFrailtyFormHosts === 'function') {
+    refreshMedicalFrailtyFormHosts(patientId, formId);
+    showToast('Form Reset', 'Form re-populated from EHR clinical data.', 'info');
   }
   if (activeRunMode === 'fhir' && currentPatientFHIRId === patientId) {
     renderFHIRAppContent(patientRegistry.find((p) => p.id === patientId));
+  } else if (typeof renderStaffDrawer === 'function' && typeof staffState !== 'undefined' && staffState.activePatientId === patientId) {
+    renderStaffDrawer();
   }
 }
 

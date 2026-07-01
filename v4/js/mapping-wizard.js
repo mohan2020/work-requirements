@@ -616,8 +616,11 @@ async function saveCurrentMapping() {
   if (wizardState.pdfBytes) {
     await storePdfBlob(saved.id, wizardState.pdfBytes);
   }
+  const remoteNote = typeof isAdminContext === 'function' && isAdminContext() && typeof isDeployedApp === 'function' && isDeployedApp()
+    ? ' Published to shared workspace.'
+    : '';
   renderWizard();
-  showWizardToast('Mapping saved', `Version ${saved.version} stored locally.`);
+  showWizardToast('Mapping saved', `Version ${saved.version} stored.${remoteNote}`);
 }
 
 function showWizardToast(title, msg) {
@@ -1216,4 +1219,18 @@ function activateMapping(id) {
 }
 window.activateMapping = activateMapping;
 
-document.addEventListener('DOMContentLoaded', initWizard);
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof captureAdminTokenFromUrl === 'function') captureAdminTokenFromUrl();
+  if (typeof initReviewWorkspace === 'function') {
+    await initReviewWorkspace().catch(() => {});
+  }
+  initWizard();
+  const footer = document.querySelector('.wizard-footer');
+  if (footer && typeof renderAdminMappingFooter === 'function') {
+    footer.insertAdjacentHTML('beforebegin', renderAdminMappingFooter());
+  }
+  const hint = document.getElementById('wizard-footer-hint');
+  if (hint && typeof isAdminContext === 'function' && !isAdminContext()) {
+    hint.textContent = 'Mapping wizard is for admins. CHWs use the main worklist only.';
+  }
+});

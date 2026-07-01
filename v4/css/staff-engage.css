@@ -327,3 +327,37 @@
   font-size: 11px; color: var(--muted-foreground);
 }
 .staff-sig-prompt.hidden { display: none; }
+
+.staff-chw-name-hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.staff-btn-primary.staff-submit-review {
+  width: 100%;
+  margin-bottom: 10px;
+  height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--primary);
+  color: #fff;
+  border: 0;
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.staff-btn-primary.staff-submit-review:hover { filter: brightness(1.05); }
+
+.admin-mapping-bar {
+  margin: 0 20px 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  background: #ede9fe;
+  border: 1px solid #c4b5fd;
+  border-radius: var(--radius);
+  color: #5b21b6;
+}
+.admin-mapping-bar .warn { display: block; margin-top: 4px; font-size: 11px; }

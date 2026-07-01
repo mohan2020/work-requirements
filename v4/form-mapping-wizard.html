@@ -33,7 +33,7 @@
 
       <footer class="wizard-footer">
         <button type="button" class="btn secondary" id="btn-prev" onclick="prevStep()">Back</button>
-        <span class="hint">Mappings save locally in your browser for this prototype.</span>
+        <span class="hint" id="wizard-footer-hint">Admin: saves publish to the shared workspace when using <code>?admin=1</code>.</span>
         <button type="button" class="btn primary" id="btn-next">Continue</button>
       </footer>
     </div>
@@ -41,6 +41,8 @@
 
   <script src="js/ehr-field-catalog.js"></script>
   <script src="js/mapping-storage.js"></script>
+  <script src="js/remote-storage.js"></script>
+  <script src="js/review-inbox.js"></script>
   <script src="js/form-field-mapper.js"></script>
   <script src="js/pdf-custom-overlays.js"></script>
   <script src="js/pdf-map-viewer.js"></script>

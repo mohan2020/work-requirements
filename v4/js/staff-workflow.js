@@ -53,7 +53,41 @@ const staffState = {
   selectedFormId: 'PA_MF',
   nextOutreachDate: '',
   outreachNotes: '',
+  chwName: '',
 };
+
+function getStaffChwNameValue() {
+  return staffState.chwName || (typeof getStaffChwName === 'function' ? getStaffChwName() : '');
+}
+
+function renderStaffChwNameField() {
+  const name = getStaffChwNameValue();
+  return `
+    <div class="od-group staff-chw-name-row">
+      <label>Your name <span class="staff-req">*</span></label>
+      <input type="text" class="od-input" id="staff-chw-name" placeholder="e.g. Maria Santos"
+        value="${name.replace(/"/g, '&quot;')}"
+        oninput="staffState.chwName = this.value; if (typeof setStaffChwName === 'function') setStaffChwName(this.value)">
+      <p class="staff-chw-name-hint">Used when you submit a form for supervisor review.</p>
+    </div>`;
+}
+
+function renderStaffSubmitActions() {
+  return `
+    <div class="staff-drawer-actions">
+      <button type="button" class="staff-btn-primary staff-submit-review" onclick="staffSubmitForReview()">
+        ${staffIcon('send', 16)} Submit for review
+      </button>
+      <div class="btn-row">
+        <button type="button" class="staff-btn-secondary" onclick="staffSavePartial()">Save partial draft</button>
+        <button type="button" class="staff-btn-secondary" onclick="staffSaveAndDownload()">Save &amp; download PDF</button>
+      </div>
+    </div>`;
+}
+
+function renderStaffSubmitActionsHtml() {
+  return renderStaffSubmitActions().replace('download PDF', 'download for print');
+}
 
 function staffIcon(name, size = 18) {
   return `<i data-lucide="${name}" style="width:${size}px;height:${size}px"></i>`;
@@ -154,6 +188,7 @@ function openStaffDrawer(patientId) {
   staffState.selectedFormId = 'PA_MF';
   staffState.nextOutreachDate = p.nextOutreachDate || '';
   staffState.outreachNotes = '';
+  staffState.chwName = typeof getStaffChwName === 'function' ? getStaffChwName() : '';
 
   ['PA_MF', 'PA_1663'].forEach((fid) => applyDraftToFormState(patientId, fid));
 
@@ -349,6 +384,9 @@ function renderStaffDrawerCenter() {
       `<option value="${f.id}" ${staffState.selectedFormId === f.id ? 'selected' : ''}>${f.label}</option>`
     ).join('');
 
+    const useHtmlForm = typeof shouldUseHtmlFormViewer === 'function'
+      && shouldUseHtmlFormViewer(staffState.selectedFormId);
+
     if (useOfficialPdf) {
       formBlock = `
       <div class="od-group">
@@ -365,12 +403,32 @@ function renderStaffDrawerCenter() {
       </div>
       <div id="staff-official-pdf-host" class="staff-official-pdf-host"></div>
       ${renderStaffSignatureSection(p.id, staffState.selectedFormId)}
-      <div class="staff-drawer-actions">
-        <div class="btn-row">
-          <button type="button" class="staff-btn-secondary" onclick="staffSavePartial()">Save partial draft</button>
-          <button type="button" class="staff-btn-secondary" onclick="staffSaveAndDownload()">Save &amp; download PDF</button>
+      ${renderStaffChwNameField()}
+      ${renderStaffSubmitActions()}
+      `;
+    } else if (useHtmlForm) {
+      formBlock = `
+      <div class="od-group">
+        <label>Exemption form</label>
+        <div class="od-select-row">
+          <select id="staff-form-select" onchange="setStaffForm(this.value)">${formOptions}</select>
+          ${staffIcon('chevron-down', 16)}
         </div>
-      </div>`;
+      </div>
+      <div class="staff-form-progress">
+        <span><strong>${completion.filled}</strong> of <strong>${completion.total}</strong> fields</span>
+        <div class="bar"><div class="bar-fill" style="width:${completion.percent}%"></div></div>
+        <span>${completion.percent}%</span>
+      </div>
+      <div id="staff-html-form-host" class="staff-html-form-host">
+        ${typeof renderMedicalFrailtyHtmlForm === 'function'
+          ? renderMedicalFrailtyHtmlForm(p.id, staffState.selectedFormId)
+          : ''}
+      </div>
+      ${renderStaffSignatureSection(p.id, staffState.selectedFormId)}
+      ${renderStaffChwNameField()}
+      ${renderStaffSubmitActionsHtml()}
+      `;
     } else {
       const { filled, remaining } = analyzeFormFields(p.id, staffState.selectedFormId);
       formBlock = `
@@ -395,12 +453,9 @@ function renderStaffDrawerCenter() {
         <div class="staff-field-list">${renderStaffFieldItems(p.id, staffState.selectedFormId, remaining, false)}</div>
       </div>
       ${renderStaffSignatureSection(p.id, staffState.selectedFormId)}
-      <div class="staff-drawer-actions">
-        <div class="btn-row">
-          <button type="button" class="staff-btn-secondary" onclick="staffSavePartial()">Save partial draft</button>
-          <button type="button" class="staff-btn-secondary" onclick="staffSaveAndDownload()">Save &amp; download for print</button>
-        </div>
-      </div>`;
+      ${renderStaffChwNameField()}
+      ${renderStaffSubmitActionsHtml()}
+      `;
     }
   } else if (reachedNo) {
     formBlock = `
@@ -581,6 +636,78 @@ async function staffSavePartial() {
   renderStaffDrawer();
 }
 
+async function staffSubmitForReview() {
+  const pid = staffState.activePatientId;
+  const fid = staffState.selectedFormId;
+  if (!pid || !fid) return;
+
+  const nameEl = document.getElementById('staff-chw-name');
+  const chwName = nameEl?.value?.trim() || getStaffChwNameValue();
+  if (!chwName) {
+    showToast('Name needed', 'Please enter your name before submitting for review.', 'info');
+    nameEl?.focus();
+    return;
+  }
+  if (typeof setStaffChwName === 'function') setStaffChwName(chwName);
+
+  if (typeof captureSignaturesToFormState === 'function') {
+    captureSignaturesToFormState(pid, fid);
+  }
+
+  const patient = getPatient(pid);
+  const entry = typeof getManifestFormEntry === 'function'
+    ? getManifestFormEntry(fid)
+    : { title: FORM_SCHEMAS?.[fid]?.title || fid };
+  const useOfficialPdf = typeof shouldUseOfficialPdfViewer === 'function' && shouldUseOfficialPdfViewer(fid);
+  const completion = useOfficialPdf && typeof getOfficialPdfCompletionAsync === 'function'
+    ? await getOfficialPdfCompletionAsync(pid, fid)
+    : getFormCompletion(pid, fid);
+
+  saveFormSubmission(pid, fid, getFormState(pid, fid), {
+    percentComplete: completion.percent,
+    officialPdf: useOfficialPdf,
+    submittedBy: chwName,
+  });
+
+  if (typeof submitForReview !== 'function') {
+    showToast('Not available offline', 'Submit for review works on the deployed app URL.', 'info');
+    return;
+  }
+
+  if (typeof isDeployedApp === 'function' && !isDeployedApp()) {
+    showToast('Not available offline', 'Submit for review works on the deployed app URL.', 'info');
+    return;
+  }
+
+  showToast('Submitting…', 'Sending your form to the review team.', 'info');
+
+  try {
+    const payload = {
+      patientId: pid,
+      patientName: patient?.name || pid,
+      formId: fid,
+      formTitle: entry.title,
+      percentComplete: completion.percent,
+      submittedBy: chwName,
+    };
+
+    if (useOfficialPdf && typeof buildFilledOfficialPdf === 'function') {
+      const bytes = await buildFilledOfficialPdf(pid, fid);
+      payload.filename = `review_${fid}_${patient.name.replace(/\s+/g, '_')}.pdf`;
+      payload.pdfBase64 = arrayBufferToBase64(bytes);
+    } else {
+      payload.formState = getFormState(pid, fid);
+      payload.filename = `review_${fid}_${patient.name.replace(/\s+/g, '_')}.json`;
+    }
+
+    await submitForReview(payload);
+    showToast('Submitted for review', 'Thank you — your supervisor can review this submission.', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('Submit failed', err.message || 'Could not submit for review. Try again or save a draft.', 'info');
+  }
+}
+
 async function staffSaveAndDownload() {
   const pid = staffState.activePatientId;
   const fid = staffState.selectedFormId;
@@ -592,8 +719,11 @@ async function staffSaveAndDownload() {
     await downloadFilledOfficialPdf(pid, fid);
   } else if (fid === 'PA_1663' && typeof exportOfficialPA1663 === 'function') {
     await exportOfficialPA1663(pid);
+  } else if (fid === 'PA_MF' && typeof printMedicalFrailtyForm === 'function') {
+    printMedicalFrailtyForm(pid, fid);
+    showToast('Print ready', `${FORM_SCHEMAS[fid].shortTitle} saved. Use your browser print dialog to save or print.`, 'success');
   } else {
-    showToast('Download ready', `${FORM_SCHEMAS[fid].shortTitle} saved. PDF export placeholder — official template not available for this form yet.`, 'info');
+    showToast('Download ready', `${FORM_SCHEMAS[fid].shortTitle} saved. Official PDF not available for this form.`, 'info');
   }
   renderStaffDrawer();
 }
@@ -645,6 +775,7 @@ window.setStaffReached = setStaffReached;
 window.setStaffForm = setStaffForm;
 window.staffFieldChange = staffFieldChange;
 window.staffSavePartial = staffSavePartial;
+window.staffSubmitForReview = staffSubmitForReview;
 window.staffSaveAndDownload = staffSaveAndDownload;
 window.staffLogUnreachable = staffLogUnreachable;
 window.renderStaffWorklistRows = renderStaffWorklistRows;

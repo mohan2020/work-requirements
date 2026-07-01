@@ -246,19 +246,35 @@ function renderFhirExemptionFormsPanel(patient) {
 
   const useOfficialPdf = typeof shouldUseOfficialPdfViewer === 'function'
     && shouldUseOfficialPdfViewer(formId);
+  const useHtmlForm = typeof shouldUseHtmlFormViewer === 'function'
+    && shouldUseHtmlFormViewer(formId);
 
-  const questionnaireHost = useOfficialPdf
-    ? `<div id="fhir-official-pdf-host" class="staff-official-pdf-host fhir-official-pdf-host"></div>`
-    : `<div id="fhir-form-questionnaire-host">
-          ${renderFormQuestionnaire(patient.id, formId, { readonly: isLocked })}
-        </div>`;
+  let questionnaireHost = '';
+  if (useOfficialPdf) {
+    questionnaireHost = `<div id="fhir-official-pdf-host" class="staff-official-pdf-host fhir-official-pdf-host"></div>`;
+  } else if (useHtmlForm) {
+    questionnaireHost = `<div id="fhir-html-form-host" class="fhir-html-form-host">
+      ${typeof renderMedicalFrailtyHtmlForm === 'function'
+        ? renderMedicalFrailtyHtmlForm(patient.id, formId, { readonly: isLocked })
+        : ''}
+    </div>`;
+  } else {
+    questionnaireHost = `<div id="fhir-form-questionnaire-host">
+      ${renderFormQuestionnaire(patient.id, formId, { readonly: isLocked })}
+    </div>`;
+  }
 
   const pdfNotice = useOfficialPdf ? `
     <div class="bg-sky-50 border border-sky-200 rounded-lg p-3 text-xs text-sky-900 mb-4">
       <i class="fa-solid fa-file-pdf mr-1"></i>
       <strong>Official DHS PDF</strong> — EHR-mapped fields are pre-filled below.
       Complete remaining fields and signatures on the form before saving to chart.
-    </div>` : '';
+    </div>` : (useHtmlForm ? `
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 mb-4">
+      <i class="fa-solid fa-file-lines mr-1"></i>
+      <strong>Medical Frailty HTML form</strong> — no official DHS PDF is published yet.
+      EHR-mapped fields are pre-filled in the document below. Complete remaining fields before saving to chart.
+    </div>` : '');
 
   return `
     <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">

@@ -59,6 +59,7 @@ async function downloadFilledOfficialPdf(patientId, formId) {
     const filename = OFFICIAL_FORMS[formId]?.filename?.(patient)
       || `official_${formId}_${patient.name.replace(/\s+/g, '_')}.pdf`;
     downloadPdfBlob(bytes, filename);
+
     showToast(
       'Official PDF ready',
       'Downloaded the official DHS form with EHR-mapped fields pre-filled. Complete signatures and remaining fields on the PDF before submission.',

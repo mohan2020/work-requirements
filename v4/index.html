@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/engage/kit.css">
     <link rel="stylesheet" href="css/staff-engage.css">
+    <link rel="stylesheet" href="css/pa-mf-form.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
@@ -55,7 +56,9 @@
     <script src="js/form-field-mapper.js"></script>
     <script src="js/pdf-custom-overlays.js"></script>
     <script src="js/mapping-storage.js"></script>
+    <script src="js/remote-storage.js"></script>
     <script src="js/form-engine.js"></script>
+    <script src="js/pa-mf-html-form.js"></script>
     <script src="js/signature-pad.js"></script>
     <script src="js/pdf-form-fill.js"></script>
     <script src="js/pdf-map-viewer.js"></script>
@@ -140,8 +143,10 @@
                     <div class="nav-label">Program</div>
                     <div class="nav-item active" title="Worklist"><i data-lucide="list-checks" style="width:18px;height:18px"></i><span class="lbl">Worklist</span></div>
                     <div class="nav-item" title="Reports"><i data-lucide="bar-chart-3" style="width:18px;height:18px"></i><span class="lbl">Reports</span></div>
-                    <div class="nav-label">Admin</div>
-                    <a href="form-mapping-wizard.html" class="nav-item" title="Form mapping" style="text-decoration:none;color:inherit"><i data-lucide="wand-sparkles" style="width:18px;height:18px"></i><span class="lbl">Form mapping</span></a>
+                    <div class="nav-label" id="staff-admin-nav">Admin</div>
+                    <div id="staff-admin-nav-items">
+                    <a href="form-mapping-wizard.html?admin=1" class="nav-item" title="Form mapping" style="text-decoration:none;color:inherit"><i data-lucide="wand-sparkles" style="width:18px;height:18px"></i><span class="lbl">Form mapping</span></a>
+                    </div>
                     <div class="nav-item" title="Settings" onclick="openSettingsModal()"><i data-lucide="settings" style="width:18px;height:18px"></i><span class="lbl">Settings</span></div>
                 </nav>
                 <div class="sb-user">
@@ -596,6 +601,11 @@
             checkApiKeyStatus();
             initStaffNavCollapse();
             if (window.lucide) lucide.createIcons();
+            if (typeof initReviewWorkspace === 'function') {
+                initReviewWorkspace().catch((err) => console.warn('Shared mappings load skipped:', err.message));
+            }
+            if (typeof applyChwUiMode === 'function') applyChwUiMode();
+            if (typeof captureAdminTokenFromUrl === 'function') captureAdminTokenFromUrl();
             window.addEventListener('resize', () => {
               if (typeof handleSignaturePadResize === 'function') handleSignaturePadResize();
             });
@@ -620,10 +630,10 @@
             const keyVal = document.getElementById('api-key-input').value.trim();
             if (keyVal) {
                 localStorage.setItem('gemini_api_key', keyVal);
-                showToast('Success', 'Gemini API Key saved and registered locally!', 'success');
+                showToast('Success', 'Gemini API key saved.', 'success');
             } else {
                 localStorage.removeItem('gemini_api_key');
-                showToast('Key Removed', 'Using High-Fidelity local simulation for outreach.', 'info');
+                showToast('Key removed', 'Using local simulation for outreach.', 'info');
             }
             checkApiKeyStatus();
             closeSettingsModal();
