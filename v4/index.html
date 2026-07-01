@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penn Medicine PA Medicaid Exemption Workspace v4</title>
+    <title>PA Medicaid Exemption Workspace v4</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -133,7 +133,7 @@
             <aside class="sidebar">
                 <div class="sb-brand">
                     <span class="mark"><img src="assets/w2h-mark-white.svg" alt="" width="25"></span>
-                    <span class="wm">Exemption<small>Penn Medicine · HR1</small></span>
+                    <span class="wm">Exemption<small>PA Medicaid · HR1</small></span>
                     <button type="button" class="sb-collapse" id="staff-nav-toggle" onclick="toggleStaffNavCollapse()"
                         title="Collapse navigation" aria-label="Collapse navigation">
                         <i data-lucide="panel-left-close" style="width:18px;height:18px"></i>
@@ -821,7 +821,7 @@
             const apiKey = localStorage.getItem('gemini_api_key') || "";
             const useRealAPI = apiKey.length > 10;
 
-            const systemPrompt = `You are a Community Health Worker (CHW) lead at Penn Medicine. Write a compassionate, professional patient outreach script addressing the impending PA Medicaid 80-hour work requirement beginning Jan 1, 2027. Avoid dense technical legal jargon. Directly reference their conditions (${patient.rationale}) with absolute privacy. Explain that Penn Medicine has pre-populated their official PA 1663 Medical Exemption Form to protect their health coverage.`;
+            const systemPrompt = `You are a Community Health Worker (CHW) lead at a health system. Write a compassionate, professional patient outreach script addressing the impending PA Medicaid 80-hour work requirement beginning Jan 1, 2027. Avoid dense technical legal jargon. Directly reference their conditions (${patient.rationale}) with absolute privacy. Explain that the care team has pre-populated their official PA 1663 Medical Exemption Form to protect their health coverage.`;
 
             const userQuery = `Produce a highly structured, patient-specific draft for the channel: "${channel}". 
             Target patient: ${patient.name}. 
@@ -873,22 +873,22 @@
         // Local simulation generator
         function executeLocalSimulation(patient, channel, barrier, outputBox) {
             let output = "";
-            const formStatusMessage = patient.isSigned ? "Good news: your Penn Medicine provider Siobhan Mita, MD, has already signed and certified your PA-1663 Exemption document!" : "We have drafted your PA-1663 Medical Exemption form and need to coordinate a quick clinical sign-off with your provider.";
+            const formStatusMessage = patient.isSigned ? "Good news: your provider has already signed and certified your PA-1663 Exemption document!" : "We have drafted your PA-1663 Medical Exemption form and need to coordinate a quick clinical sign-off with your provider.";
 
             if (channel === 'sms') {
                 if (barrier === 'espanol') {
-                    output = `Penn Medicine: Hola ${patient.name}, nuevo requisito de trabajo para Medicaid comienza pronto. Su médico ha preparado la exención de salud por "${patient.rationale}". Llámenos al 215-555-0199 para subirlo a PA COMPASS.`;
+                    output = `Health plan: Hola ${patient.name}, nuevo requisito de trabajo para Medicaid comienza pronto. Su médico ha preparado la exención de salud por "${patient.rationale}". Llámenos al 215-555-0199 para subirlo a PA COMPASS.`;
                 } else if (barrier === 'cognitive') {
-                    output = `Penn Medicine Reminder:\n\n1. Pennsylvania is starting new monthly rules for Medicaid.\n2. ${patient.name}, we have prepared a medical exemption letter because of your health conditions (${patient.rationale}).\n3. Call us at 215-555-0199. We want to help you keep your health coverage!`;
+                    output = `Medicaid outreach reminder:\n\n1. Pennsylvania is starting new monthly rules for Medicaid.\n2. ${patient.name}, we have prepared a medical exemption letter because of your health conditions (${patient.rationale}).\n3. Call us at 215-555-0199. We want to help you keep your health coverage!`;
                 } else if (barrier === 'transportation') {
-                    output = `Penn Med Alert: Hello ${patient.name}. PA Medicaid is starting monthly work/activity requirements. We have pre-populated your exemption form. If you cannot access the COMPASS website, please let us know so we can mail a pre-stamped return envelope or fax it to your County Office. Call: 215-555-0199.`;
+                    output = `Medicaid alert: Hello ${patient.name}. PA Medicaid is starting monthly work/activity requirements. We have pre-populated your exemption form. If you cannot access the COMPASS website, please let us know so we can mail a pre-stamped return envelope or fax it to your County Office. Call: 215-555-0199.`;
                 } else {
-                    output = `Penn Med Outreach: Hello ${patient.name}. PA DHS is starting monthly work rules. Based on your health history, you qualify for an exemption. ${formStatusMessage} Please call our team at 215-555-0199 to finalize your filing.`;
+                    output = `Outreach team: Hello ${patient.name}. PA DHS is starting monthly work rules. Based on your health history, you qualify for an exemption. ${formStatusMessage} Please call our team at 215-555-0199 to finalize your filing.`;
                 }
             } else if (channel === 'email') {
-                output = `Subject: Urgent Medicaid Action: Medical Exemption Ready for ${patient.name}\n\nDear ${patient.name},\n\nThe Pennsylvania Department of Human Services is implementing a monthly 80-hour community engagement and work requirement starting soon.\n\nBecause of your current care plan at Penn Medicine for "${patient.rationale}", you are eligible for an exemption from these reporting rules.\n\n${formStatusMessage}\n\nOur Community Health Team is here to help you upload this signed document to your PA COMPASS portal, or we can submit it directly to the local County Assistance Office on your behalf.\n\nPlease call us at 215-555-0199 as soon as possible to ensure your insurance coverage is not interrupted.\n\nWarm regards,\nPenn Medicine Support Team`;
+                output = `Subject: Urgent Medicaid Action: Medical Exemption Ready for ${patient.name}\n\nDear ${patient.name},\n\nThe Pennsylvania Department of Human Services is implementing a monthly 80-hour community engagement and work requirement starting soon.\n\nBecause of your current care plan for "${patient.rationale}", you are eligible for an exemption from these reporting rules.\n\n${formStatusMessage}\n\nOur Community Health Team is here to help you upload this signed document to your PA COMPASS portal, or we can submit it directly to the local County Assistance Office on your behalf.\n\nPlease call us at 215-555-0199 as soon as possible to ensure your insurance coverage is not interrupted.\n\nWarm regards,\nCommunity Health Support Team`;
             } else {
-                output = `[CHW Phone Script Guide]\n\n"Hello ${patient.name}, my name is [Name] calling from the Penn Medicine Community Outreach Team. I'm reaching out to make sure your Medicaid health coverage continues smoothly with the new state work requirements.\n\nOur clinical records indicate that you qualify for a medical exemption due to your current treatment for ${patient.rationale}. ${formStatusMessage}\n\nDo you have an active PA COMPASS portal login, or would you prefer we coordinate sending this form directly to your South Philadelphia County Assistance office?"`;
+                output = `[CHW Phone Script Guide]\n\n"Hello ${patient.name}, my name is [Name] calling from the Community Outreach Team. I'm reaching out to make sure your Medicaid health coverage continues smoothly with the new state work requirements.\n\nOur clinical records indicate that you qualify for a medical exemption due to your current treatment for ${patient.rationale}. ${formStatusMessage}\n\nDo you have an active PA COMPASS portal login, or would you prefer we coordinate sending this form directly to your South Philadelphia County Assistance office?"`;
             }
 
             outputBox.value = output;

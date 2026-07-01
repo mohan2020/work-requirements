@@ -93,7 +93,7 @@ async function buildLegacyPA1663Bytes(patientId) {
       const pages = pdfDoc.getPages();
       const page = pages[pages.length - 1];
       page.drawImage(png, { x: 120, y: 80, width: 140, height: 40 });
-      page.drawText('Digitally captured in Penn Medicine EHR', {
+      page.drawText('Digitally captured in clinical EHR', {
         x: 120,
         y: 70,
         size: 7,
