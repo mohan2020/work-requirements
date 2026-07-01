@@ -59,6 +59,9 @@ function fhirSaveToChart(patientId, formId) {
   if (typeof captureFhirSignaturesToFormState === 'function') {
     captureFhirSignaturesToFormState(patientId, formId);
   }
+  if (typeof refreshOfficialPdfViewer === 'function') {
+    void refreshOfficialPdfViewer(patientId, formId);
+  }
   const completion = getFormCompletion(patientId, formId);
   saveFormSubmission(patientId, formId, getFormState(patientId, formId), {
     percentComplete: completion.percent,
@@ -89,6 +92,9 @@ function fhirClinicianSignOff(patientId, formId) {
 
   if (typeof captureFhirSignaturesToFormState === 'function') {
     captureFhirSignaturesToFormState(patientId, formId);
+  }
+  if (typeof refreshOfficialPdfViewer === 'function') {
+    void refreshOfficialPdfViewer(patientId, formId);
   }
 
   const state = getFormState(patientId, formId);

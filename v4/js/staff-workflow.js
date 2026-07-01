@@ -197,6 +197,7 @@ function openStaffDrawer(patientId) {
 }
 
 function closeStaffDrawer() {
+  if (typeof closeStaffSignatureModal === 'function') closeStaffSignatureModal();
   staffState.activePatientId = null;
   unmountOfficialPdfViewer();
   document.removeEventListener('keydown', staffEscHandler);
@@ -239,36 +240,19 @@ function refreshStaffDrawerCenter() {
 }
 
 function renderStaffSignatureSection(patientId, formId) {
-  if (typeof renderSignaturePadHtml !== 'function') return '';
-  return `
-    <div class="staff-signature-section">
-      <p class="staff-sig-section-title">Signatures</p>
-      ${renderSignaturePadHtml({
-        canvasId: 'staff-sig-patient',
-        label: 'Patient signature',
-        hint: 'Patient signs here (mouse or stylus)',
-        stroke: '#7c3aed',
-        variant: 'staff',
-      })}
-      ${renderSignaturePadHtml({
-        canvasId: 'staff-sig-provider',
-        label: 'Provider signature',
-        hint: 'Provider signs here (optional during outreach)',
-        stroke: '#0284c7',
-        variant: 'staff',
-      })}
-    </div>`;
+  if (typeof renderStaffSignatureSectionHtml !== 'function') return '';
+  return renderStaffSignatureSectionHtml(patientId, formId);
 }
 
 function initStaffDrawerSignaturePads() {
-  const host = document.getElementById('staff-od-panel');
-  if (!host || typeof initSignaturePads !== 'function') return;
-  initSignaturePads(host);
-  const pid = staffState.activePatientId;
-  const fid = staffState.selectedFormId;
-  if (pid && fid && typeof restoreStaffDrawerSignatures === 'function') {
-    restoreStaffDrawerSignatures(pid, fid);
-  }
+  ensureStaffSignatureActionsPlacement();
+}
+
+function ensureStaffSignatureActionsPlacement() {
+  const wrap = document.querySelector('.staff-pdf-viewer-wrap');
+  const actions = document.getElementById('staff-signature-actions');
+  if (!wrap || !actions || actions.previousElementSibling === wrap) return;
+  wrap.insertAdjacentElement('afterend', actions);
 }
 
 async function mountStaffOfficialPdfIfNeeded() {
@@ -277,7 +261,10 @@ async function mountStaffOfficialPdfIfNeeded() {
   if (!pid || staffState.reached !== 'Yes') return;
   if (typeof shouldUseOfficialPdfViewer !== 'function' || !shouldUseOfficialPdfViewer(fid)) return;
   const host = document.getElementById('staff-official-pdf-host');
-  if (host) await mountOfficialPdfViewer(host, pid, fid);
+  if (host) {
+    await mountOfficialPdfViewer(host, pid, fid);
+    ensureStaffSignatureActionsPlacement();
+  }
 }
 
 function renderStaffDrawer() {
@@ -401,7 +388,9 @@ function renderStaffDrawerCenter() {
         <div class="bar"><div class="bar-fill" style="width:${completion.percent}%"></div></div>
         <span>${completion.percent}%</span>
       </div>
-      <div id="staff-official-pdf-host" class="staff-official-pdf-host"></div>
+      <div class="staff-pdf-viewer-wrap">
+        <div id="staff-official-pdf-host" class="staff-official-pdf-host"></div>
+      </div>
       ${renderStaffSignatureSection(p.id, staffState.selectedFormId)}
       ${renderStaffChwNameField()}
       ${renderStaffSubmitActions()}
@@ -608,7 +597,13 @@ function bindStaffDrawerEvents() {
 }
 
 function staffEscHandler(e) {
-  if (e.key === 'Escape' && staffState.activePatientId) closeStaffDrawer();
+  if (e.key !== 'Escape') return;
+  const sigModal = document.getElementById('modal-staff-signature');
+  if (sigModal && !sigModal.classList.contains('hidden')) {
+    closeStaffSignatureModal();
+    return;
+  }
+  if (staffState.activePatientId) closeStaffDrawer();
 }
 
 async function staffSavePartial() {

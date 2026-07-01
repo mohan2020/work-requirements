@@ -138,27 +138,21 @@ function destroyAllSignaturePads() {
 function captureSignaturesToFormState(patientId, formId, padIds = {}) {
   const state = getFormState(patientId, formId);
   const patient = patientRegistry.find((p) => p.id === patientId);
-  const { patientPad = 'staff-sig-patient', providerPad = 'staff-sig-provider' } = padIds;
+  const { patientPad, providerPad } = padIds;
 
-  const patientSig = getSignatureDataUrl(patientPad);
-  if (patientSig) {
-    state.patientSignatureDataUrl = patientSig;
-    state.patientSignatureAck = true;
-    if (patient) {
-      patient.signatureDataUrl = patientSig;
-      if (typeof initPatientFormWorkflow === 'function') {
-        initPatientFormWorkflow(patient);
-        patient.formWorkflow[formId].patientSigned = true;
-      }
-    }
+  if (patientPad) {
+    const padSig = getSignatureDataUrl(patientPad);
+    if (padSig) persistStaffSignature(patientId, formId, 'patient', padSig);
+  }
+  if (providerPad) {
+    const padSig = getSignatureDataUrl(providerPad);
+    if (padSig) persistStaffSignature(patientId, formId, 'provider', padSig);
   }
 
-  const providerSig = getSignatureDataUrl(providerPad);
-  if (providerSig) {
-    state.providerSignatureDataUrl = providerSig;
-  }
-
-  return { patientSig, providerSig };
+  return {
+    patientSig: state.patientSignatureDataUrl || patient?.signatureDataUrl || null,
+    providerSig: state.providerSignatureDataUrl || null,
+  };
 }
 
 function captureFhirSignaturesToFormState(patientId, formId) {
@@ -168,6 +162,15 @@ function captureFhirSignaturesToFormState(patientId, formId) {
   });
 }
 
+const staffSigModalState = {
+  role: null,
+  patientId: null,
+  formId: null,
+  stroke: '#0284c7',
+};
+
+const STAFF_SIG_MODAL_CANVAS = 'staff-sig-modal-canvas';
+
 function renderSignaturePadHtml({
   canvasId,
   label,
@@ -176,7 +179,7 @@ function renderSignaturePadHtml({
   clearLabel = 'Clear',
   variant = 'staff',
 }) {
-  if (variant === 'fhir') {
+  if (variant === 'fhir' || variant === 'modal') {
     return `
       <div class="bg-white border border-slate-200 rounded-xl p-4 mt-4 space-y-3">
         <div class="flex justify-between items-center">
@@ -191,18 +194,172 @@ function renderSignaturePadHtml({
       </div>`;
   }
 
+  return '';
+}
+
+function getStaffSignatureDataUrl(patientId, formId, role) {
+  const state = getFormState(patientId, formId);
+  const patient = patientRegistry.find((p) => p.id === patientId);
+  if (role === 'patient') {
+    return state.patientSignatureDataUrl || patient?.signatureDataUrl || null;
+  }
+  return state.providerSignatureDataUrl || null;
+}
+
+function persistStaffSignature(patientId, formId, role, dataUrl) {
+  const state = getFormState(patientId, formId);
+  const patient = patientRegistry.find((p) => p.id === patientId);
+  if (role === 'patient') {
+    if (dataUrl) {
+      state.patientSignatureDataUrl = dataUrl;
+      state.patientSignatureAck = true;
+      if (patient) {
+        patient.signatureDataUrl = dataUrl;
+        if (typeof initPatientFormWorkflow === 'function') {
+          initPatientFormWorkflow(patient);
+          patient.formWorkflow[formId].patientSigned = true;
+        }
+      }
+    } else {
+      delete state.patientSignatureDataUrl;
+      state.patientSignatureAck = false;
+      if (patient) {
+        delete patient.signatureDataUrl;
+        if (patient.formWorkflow?.[formId]) patient.formWorkflow[formId].patientSigned = false;
+      }
+    }
+  } else if (dataUrl) {
+    state.providerSignatureDataUrl = dataUrl;
+  } else {
+    delete state.providerSignatureDataUrl;
+  }
+}
+
+function renderStaffSignatureButton(patientId, formId, role, label) {
+  const signed = !!getStaffSignatureDataUrl(patientId, formId, role);
+  const btnClass = role === 'patient'
+    ? 'staff-sig-btn staff-sig-btn--patient'
+    : 'staff-sig-btn staff-sig-btn--provider';
+  const signedMark = signed ? '<span class="staff-sig-btn-check" aria-hidden="true">✓</span>' : '';
+  return `<button type="button" class="${btnClass}${signed ? ' is-signed' : ''}"
+    onclick="openStaffSignatureModal('${role}')">${label}${signedMark}</button>`;
+}
+
+function renderStaffSignatureSectionHtml(patientId, formId) {
   return `
-    <div class="staff-sig-block">
-      <div class="staff-sig-header">
-        <span class="staff-sig-label">${label}</span>
-        <button type="button" class="staff-sig-clear" onclick="clearSignaturePad('${canvasId}')">${clearLabel}</button>
-      </div>
-      <div class="staff-sig-canvas-wrap">
-        <canvas id="${canvasId}" data-sig-pad data-sig-stroke="${stroke}"
-          class="staff-sig-canvas"></canvas>
-        <div id="${canvasId}-prompt" class="staff-sig-prompt">${hint}</div>
-      </div>
+    <div class="staff-signature-actions" id="staff-signature-actions"
+      data-patient-id="${patientId}" data-form-id="${formId}">
+      ${renderStaffSignatureButton(patientId, formId, 'patient', 'Patient Signature')}
+      ${renderStaffSignatureButton(patientId, formId, 'provider', 'Provider Signature')}
     </div>`;
+}
+
+function refreshStaffSignatureCards() {
+  const actions = document.getElementById('staff-signature-actions');
+  if (!actions || typeof staffState === 'undefined' || !staffState.activePatientId) return;
+  actions.outerHTML = renderStaffSignatureSectionHtml(
+    staffState.activePatientId,
+    staffState.selectedFormId
+  );
+}
+
+function openStaffSignatureModal(role) {
+  if (typeof staffState === 'undefined' || !staffState.activePatientId) return;
+  const modal = document.getElementById('modal-staff-signature');
+  const content = document.getElementById('modal-staff-signature-content');
+  if (!modal || !content) return;
+
+  const patientId = staffState.activePatientId;
+  const formId = staffState.selectedFormId;
+  const config = role === 'patient'
+    ? {
+      title: 'Patient signature',
+      hint: 'Patient signs here (mouse or stylus)',
+      stroke: '#7c3aed',
+    }
+    : {
+      title: 'Provider signature',
+      hint: 'Draw signature with mouse or stylus',
+      stroke: '#0284c7',
+    };
+
+  staffSigModalState.role = role;
+  staffSigModalState.patientId = patientId;
+  staffSigModalState.formId = formId;
+  staffSigModalState.stroke = config.stroke;
+
+  const titleEl = document.getElementById('staff-sig-modal-title');
+  const hintEl = document.getElementById('staff-sig-modal-hint');
+  if (titleEl) titleEl.textContent = config.title;
+  if (hintEl) hintEl.textContent = config.hint;
+
+  const canvas = document.getElementById(STAFF_SIG_MODAL_CANVAS);
+  if (canvas) {
+    canvas.dataset.sigStroke = config.stroke;
+    const prompt = getSigPadPrompt(STAFF_SIG_MODAL_CANVAS);
+    if (prompt) {
+      prompt.textContent = config.hint;
+      prompt.classList.remove('hidden');
+    }
+  }
+
+  modal.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    content.classList.remove('scale-95', 'opacity-0');
+    content.classList.add('scale-100', 'opacity-100');
+    if (!sigPadInstances.has(STAFF_SIG_MODAL_CANVAS)) {
+      bindSignaturePad(STAFF_SIG_MODAL_CANVAS, config.stroke);
+    } else {
+      const inst = sigPadInstances.get(STAFF_SIG_MODAL_CANVAS);
+      if (inst) {
+        inst.strokeStyle = config.stroke;
+        inst.ctx.strokeStyle = config.stroke;
+      }
+    }
+    resizeSignaturePad(STAFF_SIG_MODAL_CANVAS);
+    const existing = getStaffSignatureDataUrl(patientId, formId, role);
+    if (existing) restoreSignaturePad(STAFF_SIG_MODAL_CANVAS, existing);
+    else clearSignaturePad(STAFF_SIG_MODAL_CANVAS);
+  });
+}
+
+function closeStaffSignatureModal() {
+  const modal = document.getElementById('modal-staff-signature');
+  const content = document.getElementById('modal-staff-signature-content');
+  if (!modal || !content) return;
+  content.classList.remove('scale-100', 'opacity-100');
+  content.classList.add('scale-95', 'opacity-0');
+  setTimeout(() => {
+    modal.classList.add('hidden');
+    staffSigModalState.role = null;
+    staffSigModalState.patientId = null;
+    staffSigModalState.formId = null;
+  }, 200);
+}
+
+function saveStaffSignatureModal() {
+  const { role, patientId, formId } = staffSigModalState;
+  if (!role || !patientId || !formId) return;
+  const dataUrl = getSignatureDataUrl(STAFF_SIG_MODAL_CANVAS);
+  if (!dataUrl) {
+    if (typeof showToast === 'function') {
+      showToast('Signature needed', 'Draw a signature before saving.', 'info');
+    }
+    return;
+  }
+  persistStaffSignature(patientId, formId, role, dataUrl);
+  closeStaffSignatureModal();
+  refreshStaffSignatureCards();
+  if (typeof refreshOfficialPdfViewer === 'function' && typeof staffState !== 'undefined' && staffState.activePatientId) {
+    void refreshOfficialPdfViewer(staffState.activePatientId, staffState.selectedFormId);
+  }
+  if (typeof showToast === 'function') {
+    showToast('Signature saved', `${role === 'patient' ? 'Patient' : 'Provider'} signature captured.`, 'success');
+  }
+}
+
+function clearStaffSignatureModal() {
+  clearSignaturePad(STAFF_SIG_MODAL_CANVAS);
 }
 
 window.initSignaturePad = initSignaturePad;
@@ -222,13 +379,16 @@ window.handleSignaturePadResize = handleSignaturePadResize;
 window.captureSignaturesToFormState = captureSignaturesToFormState;
 window.captureFhirSignaturesToFormState = captureFhirSignaturesToFormState;
 window.renderSignaturePadHtml = renderSignaturePadHtml;
+window.renderStaffSignatureSectionHtml = renderStaffSignatureSectionHtml;
+window.openStaffSignatureModal = openStaffSignatureModal;
+window.closeStaffSignatureModal = closeStaffSignatureModal;
+window.saveStaffSignatureModal = saveStaffSignatureModal;
+window.clearStaffSignatureModal = clearStaffSignatureModal;
+window.refreshStaffSignatureCards = refreshStaffSignatureCards;
+window.persistStaffSignature = persistStaffSignature;
 
-function restoreStaffDrawerSignatures(patientId, formId) {
-  const state = getFormState(patientId, formId);
-  const patient = patientRegistry.find((p) => p.id === patientId);
-  const patientSig = state.patientSignatureDataUrl || patient?.signatureDataUrl;
-  if (patientSig) restoreSignaturePad('staff-sig-patient', patientSig);
-  if (state.providerSignatureDataUrl) restoreSignaturePad('staff-sig-provider', state.providerSignatureDataUrl);
+function restoreStaffDrawerSignatures() {
+  refreshStaffSignatureCards();
 }
 
 function restoreFhirSignatures(patientId, formId) {

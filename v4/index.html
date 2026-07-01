@@ -292,6 +292,36 @@
         </div>
     </div>
 
+    <!-- Staff signature capture modal -->
+    <div id="modal-staff-signature" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[130] flex items-center justify-center p-4 hidden" onclick="closeStaffSignatureModal()">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden transition-all duration-300 scale-95 opacity-0 transform" id="modal-staff-signature-content" onclick="event.stopPropagation()">
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-signature text-sky-400"></i>
+                    <h3 class="font-bold text-sm" id="staff-sig-modal-title">Signature</h3>
+                </div>
+                <button type="button" onclick="closeStaffSignatureModal()" class="text-slate-400 hover:text-white transition duration-150 text-lg" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-slate-500" id="staff-sig-modal-hint">Draw signature with mouse or stylus.</p>
+                <div class="border border-slate-300 rounded-lg bg-slate-50 h-40 relative overflow-hidden">
+                    <canvas id="staff-sig-modal-canvas" data-sig-pad data-sig-stroke="#0284c7"
+                        class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+                    <div id="staff-sig-modal-canvas-prompt" class="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-xs px-4 text-center"></div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="clearStaffSignatureModal()" class="text-rose-600 text-xs font-semibold hover:underline">Clear</button>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-100 border-t border-slate-200 flex justify-end gap-2">
+                <button type="button" onclick="closeStaffSignatureModal()" class="px-4 py-2 bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-bold rounded-lg transition duration-150">Cancel</button>
+                <button type="button" onclick="saveStaffSignatureModal()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg shadow transition duration-150">Save signature</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Outreach AI modal — used by SMART on FHIR clinician mode only -->
     <div id="modal-outreach" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex justify-end hidden transition-opacity duration-300 opacity-0" onclick="closeOutreachModal()">
         

@@ -75,7 +75,7 @@ async function buildLegacyPA1663Bytes(patientId) {
   const patient = patientRegistry.find((p) => p.id === patientId);
   if (!patient) throw new Error('Patient not found');
 
-  const { PDFDocument, StandardFonts, rgb } = await loadPdfLib();
+  const { PDFDocument, StandardFonts } = await loadPdfLib();
   const templateBytes = await fetchOfficialTemplate('PA_1663');
   const pdfDoc = await PDFDocument.load(templateBytes);
   const form = pdfDoc.getForm();
@@ -84,24 +84,15 @@ async function buildLegacyPA1663Bytes(patientId) {
 
   Object.entries(values).forEach(([fieldName, value]) => safeSetTextField(form, fieldName, value));
 
-  if (patient.signatureDataUrl || getFormState(patientId, 'PA_1663').patientSignatureDataUrl) {
-    const state = getFormState(patientId, 'PA_1663');
-    const sigUrl = state.patientSignatureDataUrl || patient.signatureDataUrl;
-    try {
-      const pngBytes = await fetch(sigUrl).then((r) => r.arrayBuffer());
-      const png = await pdfDoc.embedPng(pngBytes);
-      const pages = pdfDoc.getPages();
-      const page = pages[pages.length - 1];
-      page.drawImage(png, { x: 120, y: 80, width: 140, height: 40 });
-      page.drawText('Digitally captured in clinical EHR', {
-        x: 120,
-        y: 70,
-        size: 7,
-        color: rgb(0.4, 0.4, 0.4),
-      });
-    } catch (err) {
-      console.warn('Could not embed signature on official PDF', err);
+  let widgetsByName = null;
+  try {
+    if (window.PDFMapViewer?.extractFieldWidgets) {
+      widgetsByName = await PDFMapViewer.extractFieldWidgets(templateBytes);
     }
+  } catch (_) { /* optional */ }
+
+  if (typeof embedCapturedSignaturesOnPdf === 'function') {
+    await embedCapturedSignaturesOnPdf(pdfDoc, patientId, 'PA_1663', widgetsByName);
   }
 
   try {

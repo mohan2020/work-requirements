@@ -81,6 +81,86 @@ const SKIP_ACRO_PDF_FIELDS = new Set([
   'CO', 'RECORD NUMBER', 'CAT', 'CSLD', 'DIST', 'RECORD NAME', 'WORKER', 'RETURN TO:', 'RESET',
 ]);
 
+/** Official AcroForm signature widget names per schema */
+const OFFICIAL_SIGNATURE_PDF_FIELDS = {
+  PA_1663: {
+    patient: 'SIGNATURE PUBLIC ASSISTANCE APPLICANTRECIPIENT',
+    provider: 'SIGNATURE',
+  },
+};
+
+function getSignatureWidget(widgetsByName, pdfFieldName) {
+  if (!widgetsByName || !pdfFieldName) return null;
+  const widgets = typeof widgetsByName.get === 'function'
+    ? widgetsByName.get(pdfFieldName)
+    : widgetsByName[pdfFieldName];
+  return widgets?.[0] || null;
+}
+
+function resolveCapturedSignatureForPdfField(patientId, formId, pdfFieldName) {
+  const fieldMap = OFFICIAL_SIGNATURE_PDF_FIELDS[formId];
+  if (!fieldMap || !pdfFieldName) return null;
+  const patient = patientRegistry.find((p) => p.id === patientId);
+  const state = typeof getFormState === 'function' ? getFormState(patientId, formId) : {};
+  if (pdfFieldName === fieldMap.patient) {
+    return state.patientSignatureDataUrl || patient?.signatureDataUrl || null;
+  }
+  if (pdfFieldName === fieldMap.provider) {
+    return state.providerSignatureDataUrl || null;
+  }
+  return null;
+}
+
+async function dataUrlToPngBytes(dataUrl) {
+  const res = await fetch(dataUrl);
+  return res.arrayBuffer();
+}
+
+async function drawSignatureImageInRect(doc, page, dataUrl, rect) {
+  const pngBytes = await dataUrlToPngBytes(dataUrl);
+  const png = await doc.embedPng(pngBytes);
+  const padding = 1.5;
+  const maxW = Math.max(4, rect.width - padding * 2);
+  const maxH = Math.max(4, rect.height - padding * 2);
+  const scale = Math.min(maxW / png.width, maxH / png.height);
+  const width = png.width * scale;
+  const height = png.height * scale;
+  const x = rect.x + padding + (maxW - width) / 2;
+  const y = rect.y + padding + (maxH - height) / 2;
+  page.drawImage(png, { x, y, width, height });
+}
+
+async function embedCapturedSignaturesOnPdf(doc, patientId, formId, widgetsByName) {
+  const fieldMap = OFFICIAL_SIGNATURE_PDF_FIELDS[formId];
+  if (!fieldMap || !widgetsByName) return;
+
+  const patient = patientRegistry.find((p) => p.id === patientId);
+  if (!patient) return;
+  const state = getFormState(patientId, formId);
+  const pages = doc.getPages();
+
+  const placements = [
+    { dataUrl: state.patientSignatureDataUrl || patient.signatureDataUrl, pdfField: fieldMap.patient },
+    { dataUrl: state.providerSignatureDataUrl, pdfField: fieldMap.provider },
+  ];
+
+  for (const { dataUrl, pdfField } of placements) {
+    if (!dataUrl) continue;
+    const widget = getSignatureWidget(widgetsByName, pdfField);
+    if (!widget?.rect) {
+      console.warn('Signature widget not found for', pdfField);
+      continue;
+    }
+    const page = pages[widget.pageIndex];
+    if (!page) continue;
+    try {
+      await drawSignatureImageInRect(doc, page, dataUrl, widget.rect);
+    } catch (err) {
+      console.warn('Could not embed signature on official PDF:', pdfField, err);
+    }
+  }
+}
+
 function getAcroFieldStore(patientId, formId) {
   if (typeof getFormState !== 'function') return {};
   const state = getFormState(patientId, formId);
@@ -355,19 +435,16 @@ async function buildFilledOfficialPdf(patientId, formId, options = {}) {
     }
   }
 
-  const state = getFormState(patientId, formId);
-  const patientSigUrl = state.patientSignatureDataUrl || patient.signatureDataUrl;
-  if (patientSigUrl && formId === 'PA_1663') {
-    try {
-      const pngBytes = await fetch(patientSigUrl).then((r) => r.arrayBuffer());
-      const png = await doc.embedPng(pngBytes);
-      const pages = doc.getPages();
-      const page = pages[pages.length - 1];
-      page.drawImage(png, { x: 120, y: 80, width: 140, height: 40 });
-    } catch (err) {
-      console.warn('Could not embed patient signature on official PDF', err);
+  let widgetsByName = null;
+  try {
+    if (window.PDFMapViewer?.extractFieldWidgets) {
+      widgetsByName = await PDFMapViewer.extractFieldWidgets(templateBytes);
     }
+  } catch (err) {
+    console.warn('Could not load PDF widgets for signatures', err);
   }
+
+  await embedCapturedSignaturesOnPdf(doc, patientId, formId, widgetsByName);
 
   try {
     const helvetica = await doc.embedFont(StandardFonts.Helvetica);
@@ -483,3 +560,6 @@ window.saveAcroFieldValue = saveAcroFieldValue;
 window.resolveAcroFieldValue = resolveAcroFieldValue;
 window.getViewerAcroFieldEntries = getViewerAcroFieldEntries;
 window.SKIP_ACRO_PDF_FIELDS = SKIP_ACRO_PDF_FIELDS;
+window.OFFICIAL_SIGNATURE_PDF_FIELDS = OFFICIAL_SIGNATURE_PDF_FIELDS;
+window.resolveCapturedSignatureForPdfField = resolveCapturedSignatureForPdfField;
+window.embedCapturedSignaturesOnPdf = embedCapturedSignaturesOnPdf;

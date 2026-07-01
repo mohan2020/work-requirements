@@ -71,6 +71,21 @@ function buildOverlayEditor(mapping, patientId, formId, patient, scale, options 
   }
 
   if (isSignature) {
+    const sigUrl = typeof resolveCapturedSignatureForPdfField === 'function'
+      ? resolveCapturedSignatureForPdfField(patientId, formId, mapping.pdfField)
+      : null;
+    if (sigUrl) {
+      const img = document.createElement('img');
+      img.src = sigUrl;
+      img.alt = 'Captured signature';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'contain';
+      img.style.display = 'block';
+      img.style.background = '#fff';
+      wrap.appendChild(img);
+      return wrap;
+    }
     const input = document.createElement('input');
     input.type = 'text';
     input.value = prefilled || '';
