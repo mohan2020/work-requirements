@@ -261,7 +261,7 @@ async function drawCustomOverlaysOnPdf(doc, mappings) {
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const pages = doc.getPages();
 
-  mappings.filter((m) => m.isCustom && m.source !== 'skip' && m.source !== 'unmapped').forEach((m) => {
+  mappings.filter((m) => m.isCustom && m.source !== 'skip').forEach((m) => {
     const page = pages[m.pageIndex];
     if (!page || !m.rect) return;
     const value = resolveMappingPreviewValue(m);

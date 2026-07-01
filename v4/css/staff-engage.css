@@ -120,3 +120,160 @@
 
 /* Collapsed nav: expand rail on hover (Engage kit handles most rules) */
 #standalone-app-frame .app.nav-collapsed .sidebar { top: 0; height: 100%; }
+
+/* Official DHS PDF viewer (staff drawer + FHIR) */
+.staff-official-pdf-host {
+  margin-bottom: 14px;
+  min-height: 420px;
+  min-width: 0;
+}
+.fhir-official-pdf-host {
+  min-height: 520px;
+}
+.official-pdf-shell {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.official-pdf-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 12px; background: var(--accent); border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.official-pdf-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.official-pdf-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: var(--radius-full);
+  background: var(--light-sky-12); color: var(--primary); border: 1px solid #2F6BF633;
+}
+.official-pdf-title { font-size: 13px; font-weight: 600; color: var(--heading); }
+.official-pdf-toolbar-actions { display: flex; gap: 8px; }
+.official-pdf-btn {
+  flex: none; min-width: auto; height: 36px; padding: 0 12px;
+  display: inline-flex; align-items: center; gap: 6px; font-size: 13px;
+}
+.official-pdf-frame {
+  width: 100%; height: min(58vh, 640px); min-height: 380px; border: 0; background: #525659;
+}
+.official-pdf-canvas-host {
+  max-height: min(58vh, 640px);
+  min-height: 380px;
+  overflow: auto;
+  overflow-x: auto;
+  background: #525659;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+.official-pdf-canvas-host .pdf-pages-scroll {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: min-content;
+}
+.official-pdf-canvas-host .pdf-page-wrap {
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  background: #fff;
+  flex: none;
+}
+.official-pdf-canvas-host .pdf-page-canvas {
+  display: block;
+  vertical-align: top;
+  max-width: none;
+}
+.official-form-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+/* Field overlays — acro (white) + custom (purple) */
+.official-form-field {
+  position: absolute;
+  pointer-events: auto;
+  box-sizing: border-box;
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  min-width: 8px;
+  min-height: 8px;
+}
+.official-form-field.acro {
+  border: 1px solid rgba(47, 107, 246, 0.55);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+}
+.official-form-field.custom {
+  border: 2px solid #7c3aed;
+  background: rgba(237, 233, 254, 0.9);
+  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.15);
+  z-index: 2;
+}
+.official-form-field.check {
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.official-form-field.check input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  cursor: pointer;
+}
+.official-form-field.signature {
+  border-style: dashed;
+  border-color: #64748b;
+  background: rgba(255, 255, 255, 0.85);
+}
+.official-form-field input[type="text"],
+.official-form-field input[type="date"],
+.official-form-field textarea {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  padding: 1px 3px;
+  margin: 0;
+  font-family: Helvetica, Arial, sans-serif;
+  color: #0f172a;
+  resize: none;
+  min-height: 0;
+  line-height: 1.15;
+}
+.official-form-field textarea { line-height: 1.25; padding: 2px 4px; }
+.official-form-field:focus-within {
+  z-index: 5;
+  box-shadow: 0 0 0 2px rgba(47, 107, 246, 0.35);
+}
+.official-form-field.custom:focus-within {
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.35);
+}
+.official-pdf-custom-count {
+  font-size: 11px; font-weight: 600; color: #6d28d9;
+  background: #ede9fe; border: 1px solid #c4b5fd; border-radius: var(--radius-full);
+  padding: 2px 8px;
+}
+.fhir-official-pdf-host .official-pdf-canvas-host {
+  max-height: min(62vh, 720px);
+}
+.official-pdf-hint {
+  margin: 0; padding: 10px 12px; font-size: 12px; line-height: 1.5;
+  color: var(--muted-foreground); background: var(--light-navy-5);
+  border-top: 1px solid var(--border);
+}
+.official-pdf-loading, .official-pdf-error {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 280px; padding: 24px; text-align: center;
+  border: 1px dashed var(--border); border-radius: var(--radius);
+  font-size: 13px; color: var(--muted-foreground);
+}
+.official-pdf-error { flex-direction: column; color: var(--destructive, #b42318); }
+.official-pdf-error p { margin: 0; }

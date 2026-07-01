@@ -163,6 +163,7 @@ function openStaffDrawer(patientId) {
 
 function closeStaffDrawer() {
   staffState.activePatientId = null;
+  unmountOfficialPdfViewer();
   document.removeEventListener('keydown', staffEscHandler);
   const root = document.getElementById('staff-drawer-root');
   if (root) root.innerHTML = '';
@@ -190,12 +191,23 @@ function setStaffForm(formId) {
 }
 
 function refreshStaffDrawerCenter() {
+  unmountOfficialPdfViewer();
   const panel = document.getElementById('staff-od-panel');
   const formCol = panel?.querySelector('.od-col.form');
   if (formCol) {
     formCol.outerHTML = renderStaffDrawerCenter();
     if (window.lucide) lucide.createIcons();
+    mountStaffOfficialPdfIfNeeded();
   }
+}
+
+async function mountStaffOfficialPdfIfNeeded() {
+  const pid = staffState.activePatientId;
+  const fid = staffState.selectedFormId;
+  if (!pid || staffState.reached !== 'Yes') return;
+  if (typeof shouldUseOfficialPdfViewer !== 'function' || !shouldUseOfficialPdfViewer(fid)) return;
+  const host = document.getElementById('staff-official-pdf-host');
+  if (host) await mountOfficialPdfViewer(host, pid, fid);
 }
 
 function renderStaffDrawer() {
@@ -215,6 +227,7 @@ function renderStaffDrawer() {
 
   if (window.lucide) lucide.createIcons();
   bindStaffDrawerEvents();
+  mountStaffOfficialPdfIfNeeded();
 }
 
 function renderStaffDrawerContext(p) {
@@ -291,13 +304,39 @@ function renderStaffDrawerCenter() {
 
   let formBlock = '';
   if (reachedYes) {
-    const { filled, remaining } = analyzeFormFields(p.id, staffState.selectedFormId);
-    const completion = getFormCompletion(p.id, staffState.selectedFormId);
+    const useOfficialPdf = typeof shouldUseOfficialPdfViewer === 'function'
+      && shouldUseOfficialPdfViewer(staffState.selectedFormId);
+    const completion = useOfficialPdf
+      ? { filled: '…', total: '…', percent: 0 }
+      : getFormCompletion(p.id, staffState.selectedFormId);
     const formOptions = STAFF_FORMS.map((f) =>
       `<option value="${f.id}" ${staffState.selectedFormId === f.id ? 'selected' : ''}>${f.label}</option>`
     ).join('');
 
-    formBlock = `
+    if (useOfficialPdf) {
+      formBlock = `
+      <div class="od-group">
+        <label>Exemption form</label>
+        <div class="od-select-row">
+          <select id="staff-form-select" onchange="setStaffForm(this.value)">${formOptions}</select>
+          ${staffIcon('chevron-down', 16)}
+        </div>
+      </div>
+      <div class="staff-form-progress">
+        <span><strong>${completion.filled}</strong> of <strong>${completion.total}</strong> mapped fields complete</span>
+        <div class="bar"><div class="bar-fill" style="width:${completion.percent}%"></div></div>
+        <span>${completion.percent}%</span>
+      </div>
+      <div id="staff-official-pdf-host" class="staff-official-pdf-host"></div>
+      <div class="staff-drawer-actions">
+        <div class="btn-row">
+          <button type="button" class="staff-btn-secondary" onclick="staffSavePartial()">Save partial draft</button>
+          <button type="button" class="staff-btn-secondary" onclick="staffSaveAndDownload()">Save &amp; download PDF</button>
+        </div>
+      </div>`;
+    } else {
+      const { filled, remaining } = analyzeFormFields(p.id, staffState.selectedFormId);
+      formBlock = `
       <div class="od-group">
         <label>Exemption form</label>
         <div class="od-select-row">
@@ -324,6 +363,7 @@ function renderStaffDrawerCenter() {
           <button type="button" class="staff-btn-secondary" onclick="staffSaveAndDownload()">Save &amp; download for print</button>
         </div>
       </div>`;
+    }
   } else if (reachedNo) {
     formBlock = `
       <div class="staff-unreachable-panel">
@@ -478,13 +518,25 @@ function staffEscHandler(e) {
   if (e.key === 'Escape' && staffState.activePatientId) closeStaffDrawer();
 }
 
-function staffSavePartial() {
+async function staffSavePartial() {
   const pid = staffState.activePatientId;
   const fid = staffState.selectedFormId;
   if (!pid || !fid) return;
-  const completion = getFormCompletion(pid, fid);
-  saveFormSubmission(pid, fid, getFormState(pid, fid), { percentComplete: completion.percent });
-  showToast('Draft saved', `${FORM_SCHEMAS[fid].shortTitle} — ${completion.percent}% complete.`, 'success');
+  const useOfficialPdf = typeof shouldUseOfficialPdfViewer === 'function' && shouldUseOfficialPdfViewer(fid);
+  const completion = useOfficialPdf && typeof getOfficialPdfCompletionAsync === 'function'
+    ? await getOfficialPdfCompletionAsync(pid, fid)
+    : getFormCompletion(pid, fid);
+  saveFormSubmission(pid, fid, getFormState(pid, fid), {
+    percentComplete: completion.percent,
+    officialPdf: useOfficialPdf,
+  });
+  showToast(
+    'Draft saved',
+    useOfficialPdf
+      ? `${FORM_SCHEMAS[fid].shortTitle} — ${completion.percent}% EHR fields mapped on official PDF.`
+      : `${FORM_SCHEMAS[fid].shortTitle} — ${completion.percent}% complete.`,
+    'success'
+  );
   renderStaffDrawer();
 }
 
@@ -494,7 +546,10 @@ async function staffSaveAndDownload() {
   if (!pid || !fid) return;
   staffSavePartial();
   finalizeFormSubmission(pid, fid);
-  if (fid === 'PA_1663' && typeof exportOfficialPA1663 === 'function') {
+  const useOfficialPdf = typeof shouldUseOfficialPdfViewer === 'function' && shouldUseOfficialPdfViewer(fid);
+  if (useOfficialPdf && typeof downloadFilledOfficialPdf === 'function') {
+    await downloadFilledOfficialPdf(pid, fid);
+  } else if (fid === 'PA_1663' && typeof exportOfficialPA1663 === 'function') {
     await exportOfficialPA1663(pid);
   } else {
     showToast('Download ready', `${FORM_SCHEMAS[fid].shortTitle} saved. PDF export placeholder — official template not available for this form yet.`, 'info');

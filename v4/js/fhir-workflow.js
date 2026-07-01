@@ -241,20 +241,42 @@ function renderFhirExemptionFormsPanel(patient) {
       </button>
     </div>` : '';
 
+  const useOfficialPdf = typeof shouldUseOfficialPdfViewer === 'function'
+    && shouldUseOfficialPdfViewer(formId);
+
+  const questionnaireHost = useOfficialPdf
+    ? `<div id="fhir-official-pdf-host" class="staff-official-pdf-host fhir-official-pdf-host"></div>`
+    : `<div id="fhir-form-questionnaire-host">
+          ${renderFormQuestionnaire(patient.id, formId, { readonly: isLocked })}
+        </div>`;
+
+  const pdfNotice = useOfficialPdf ? `
+    <div class="bg-sky-50 border border-sky-200 rounded-lg p-3 text-xs text-sky-900 mb-4">
+      <i class="fa-solid fa-file-pdf mr-1"></i>
+      <strong>Official DHS PDF</strong> — EHR-mapped fields are pre-filled below.
+      Complete remaining fields and signatures on the form before saving to chart.
+    </div>` : '';
+
   return `
     <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
       <div class="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">${formTabs}</div>
       <div class="p-4">
         ${chwBanner}
         ${statusChips}
-        <div id="fhir-form-questionnaire-host">
-          ${renderFormQuestionnaire(patient.id, formId, { readonly: isLocked })}
-        </div>
-        ${patientSignNotice}
+        ${pdfNotice}
+        ${questionnaireHost}
+        ${useOfficialPdf ? '' : patientSignNotice}
         ${signatureBlock}
         ${actions}
       </div>
     </div>`;
+}
+
+function mountFhirOfficialPdfIfNeeded(patient) {
+  const formId = fhirFormState.activeFormId || 'PA_MF';
+  if (typeof shouldUseOfficialPdfViewer !== 'function' || !shouldUseOfficialPdfViewer(formId)) return;
+  const host = document.getElementById('fhir-official-pdf-host');
+  if (host && patient) mountOfficialPdfViewer(host, patient.id, formId);
 }
 
 function renderFHIRAppContent(patient) {
@@ -315,6 +337,7 @@ function renderFHIRAppContent(patient) {
 
   setTimeout(() => {
     if (typeof initSignaturePad === 'function') initSignaturePad();
+    mountFhirOfficialPdfIfNeeded(patient);
   }, 100);
 }
 

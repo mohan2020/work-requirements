@@ -341,6 +341,64 @@ const PDFMapViewer = (() => {
     layer.querySelectorAll('.pdf-draw-preview').forEach((el) => el.remove());
   }
 
+  async function mountPages(host, bytes, options = {}) {
+    const result = await mountPagesAtScale(host, bytes, options.scale ?? RENDER_SCALE);
+    return result;
+  }
+
+  /** Render PDF pages; optionally fit to host width. Returns { scale, pageHeights }. */
+  async function mountPagesAtScale(host, bytes, scaleOrFit = RENDER_SCALE) {
+    if (!host) return { scale: RENDER_SCALE, pageHeights: [] };
+    host.innerHTML = '<div class="pdf-pages-scroll"><p class="pdf-loading">Rendering PDF…</p></div>';
+    const scroll = host.querySelector('.pdf-pages-scroll');
+    scroll.innerHTML = '';
+
+    const lib = await loadPdfJs();
+    const doc = await lib.getDocument({ data: bytes.slice(0) }).promise;
+    const pageHeights = [];
+
+    let scale = typeof scaleOrFit === 'number' ? scaleOrFit : RENDER_SCALE;
+    if (scaleOrFit === 'fit-width') {
+      const page1 = await doc.getPage(1);
+      const base1 = page1.getViewport({ scale: 1 });
+      const available = Math.max(280, (host.clientWidth || host.offsetWidth || 560) - 24);
+      scale = Math.min(RENDER_SCALE, available / base1.width);
+      scale = Math.max(0.45, scale);
+    }
+
+    for (let i = 1; i <= doc.numPages; i += 1) {
+      const page = await doc.getPage(i);
+      const viewport = page.getViewport({ scale });
+      const baseViewport = page.getViewport({ scale: 1 });
+      const pdfPageHeight = baseViewport.height;
+      pageHeights.push(pdfPageHeight);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'pdf-page-wrap';
+      wrap.style.width = `${viewport.width}px`;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.className = 'pdf-page-canvas';
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'pdf-hotspot-layer official-form-layer';
+      overlay.dataset.page = String(i - 1);
+      overlay.style.width = `${viewport.width}px`;
+      overlay.style.height = `${viewport.height}px`;
+      overlay.dataset.pageHeight = String(pdfPageHeight);
+      overlay.dataset.scale = String(scale);
+
+      wrap.appendChild(canvas);
+      wrap.appendChild(overlay);
+      scroll.appendChild(wrap);
+    }
+
+    return { scale, pageHeights };
+  }
+
   async function mount(host, bytes, mappings, widgetsByName, selectedIdx, onSelect, onRectChange) {
     if (!host) return;
     host.innerHTML = '<div class="pdf-pages-scroll"><p class="pdf-loading">Rendering PDF…</p></div>';
@@ -389,11 +447,14 @@ const PDFMapViewer = (() => {
 
   return {
     mount,
+    mountPages,
+    mountPagesAtScale,
     updateHotspots,
     scrollToField,
     extractFieldWidgets,
     bindDrawMode,
     destroy,
+    rectToCss,
     RENDER_SCALE,
   };
 })();

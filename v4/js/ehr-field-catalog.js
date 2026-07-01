@@ -138,8 +138,97 @@ function resolveEhrSampleValue(fieldId) {
   return SAMPLE_PATIENT_VALUES[fieldId] ?? getEhrFieldById(fieldId)?.sample ?? '';
 }
 
+function formatPatientDate(value) {
+  if (!value) return '';
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) return value;
+  const parts = String(value).split('-');
+  if (parts.length === 3) return `${parts[1]}/${parts[2]}/${parts[0]}`;
+  return value;
+}
+
+/** Resolve catalog field id → live patient / form state (staff drawer + FHIR). */
+function resolveEhrPatientValue(fieldId, patient, formId = 'PA_1663') {
+  if (!fieldId || !patient) return '';
+  const state = typeof getFormState === 'function' ? getFormState(patient.id, formId) : {};
+
+  switch (fieldId) {
+    case 'patient.name':
+      return state.patientName || patient.name || '';
+    case 'patient.firstName':
+      return (state.patientName || patient.name || '').split(' ')[0] || '';
+    case 'patient.lastName': {
+      const parts = (state.patientName || patient.name || '').split(' ');
+      return parts.length > 1 ? parts[parts.length - 1] : '';
+    }
+    case 'patient.dob':
+      return formatPatientDate(state.dob || patient.dob);
+    case 'patient.gender':
+      return patient.gender || '';
+    case 'patient.mrn':
+      return patient.mrn || '';
+    case 'patient.medicaidId':
+      return patient.medicaidId || '';
+    case 'patient.ssn':
+      return patient.ssn || '';
+    case 'patient.address':
+      return state.address || patient.address || patient.caoOffice || '';
+    case 'patient.addressLine':
+      return state.address || patient.address || '';
+    case 'patient.city':
+      return state.city || 'Philadelphia';
+    case 'patient.state':
+      return state.state || 'PA';
+    case 'patient.zip':
+      return state.zip || '';
+    case 'patient.phone':
+      return state.phone || patient.phone || '';
+    case 'patient.email':
+      return state.email || '';
+    case 'patient.caoOffice':
+      return patient.caoOffice || '';
+    case 'clinical.problemList':
+      return (patient.icdCodes || []).map(({ desc }) => desc).filter(Boolean).join('\n') || patient.rationale || '';
+    case 'clinical.icdList':
+      return typeof deriveIcdList === 'function' ? deriveIcdList(patient) : '';
+    case 'clinical.rationale':
+      return state.patientStatement || state.clinicalJustification || patient.rationale || '';
+    case 'clinical.utilization12mo':
+      return patient.utilization12mo != null ? String(patient.utilization12mo) : '';
+    case 'clinical.medCount':
+      return patient.medCount != null ? String(patient.medCount) : '';
+    case 'clinical.exemptionTier':
+      return patient.exemptionStatus || '';
+    case 'provider.name':
+      return state.providerName || state.treatingProviderName || 'Siobhan Mita, MD';
+    case 'provider.npi':
+      return state.providerNpi || '1234567890';
+    case 'provider.title':
+      return state.providerTitle || 'MD';
+    case 'provider.phone':
+      return state.treatingProviderPhone || '(215) 662-4000';
+    case 'provider.address':
+      return '3400 Spruce Street, Philadelphia, PA 19104';
+    case 'provider.notes':
+      return state.clinicalJustification || state.examinationFindings || patient.physicianNotes || '';
+    case 'system.today':
+    case 'system.signatureDate':
+      return new Date().toLocaleDateString('en-US');
+    case 'system.examDate':
+      return formatPatientDate(state.examDate || state.attestationDate) || new Date().toLocaleDateString('en-US');
+    case 'manual.patientSignature':
+    case 'manual.providerSignature':
+      return '';
+    case 'manual.custom':
+      return '';
+    default:
+      return resolveEhrSampleValue(fieldId);
+  }
+}
+
 window.EHR_FIELD_CATALOG = EHR_FIELD_CATALOG;
 window.getAllEhrFields = getAllEhrFields;
 window.getEhrFieldById = getEhrFieldById;
 window.SAMPLE_PATIENT_VALUES = SAMPLE_PATIENT_VALUES;
 window.resolveEhrSampleValue = resolveEhrSampleValue;
+window.resolveEhrPatientValue = resolveEhrPatientValue;
+window.formatPatientDate = formatPatientDate;

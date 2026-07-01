@@ -61,7 +61,7 @@ The staff dashboard uses the **Engage Vivid** design system (`css/engage/kit.css
 2. **Call now** — green button appears when **Outbound call** is selected (placeholder: toast simulates dial via org telephony)
 3. **Reached patient** *(required)* — Yes / No
 4. **Call notes** — free-text documentation
-5. **Exemption forms** *(if reached = Yes)* — form dropdown (Medical Frailty, PA 1663), pre-filled vs remaining fields, partial save, download for print
+5. **Exemption forms** *(if reached = Yes)* — form dropdown; when an official DHS PDF exists (PA 1663), the **official form is shown inline** with EHR-mapped fields pre-filled — not HTML inputs. Staff complete remaining fields and signatures on the PDF, then save or download. Medical Frailty stays HTML until DHS publishes an official PDF.
 6. **Log attempt** *(if reached = No)* — next outreach date + notes → updates worklist
 
 Form drafts persist per patient in `localStorage` via `js/mapping-storage.js`.
@@ -132,7 +132,9 @@ v4/
 │   ├── mapping-wizard.js       # Wizard logic (click-to-map UI)
 │   ├── pa-1663-field-map.js    # App → PA 1663 AcroForm names
 │   ├── form-field-mapper.js    # Gap analysis for form-mapping.html
-│   └── pdf-export.js           # Official PDF fill only
+│   ├── pdf-form-fill.js        # Mapping + patient → official PDF bytes
+│   ├── official-pdf-viewer.js  # Inline official PDF in drawer / FHIR
+│   ├── pdf-export.js           # Official PDF fill only
 └── assets/
     ├── forms-manifest.json
     ├── form-field-inventory.json

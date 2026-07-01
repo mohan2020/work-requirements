@@ -38,10 +38,41 @@ async function fetchOfficialTemplate(formId) {
 }
 
 async function exportOfficialPA1663(patientId) {
+  return downloadFilledOfficialPdf(patientId, 'PA_1663');
+}
+
+async function downloadFilledOfficialPdf(patientId, formId) {
   const patient = patientRegistry.find((p) => p.id === patientId);
   if (!patient) return;
 
-  showToast('Loading Official Form', 'Filling DHS PA 1663 template with pre-populated data...', 'info');
+  const entry = typeof getManifestFormEntry === 'function'
+    ? getManifestFormEntry(formId)
+    : { title: FORM_SCHEMAS?.[formId]?.title || formId };
+
+  showToast('Loading Official Form', `Filling DHS ${entry.title} with pre-populated data...`, 'info');
+
+  try {
+    const bytes = typeof buildFilledOfficialPdf === 'function'
+      ? await buildFilledOfficialPdf(patientId, formId)
+      : await buildLegacyPA1663Bytes(patientId);
+
+    const filename = OFFICIAL_FORMS[formId]?.filename?.(patient)
+      || `official_${formId}_${patient.name.replace(/\s+/g, '_')}.pdf`;
+    downloadPdfBlob(bytes, filename);
+    showToast(
+      'Official PDF ready',
+      'Downloaded the official DHS form with EHR-mapped fields pre-filled. Complete signatures and remaining fields on the PDF before submission.',
+      'success'
+    );
+  } catch (err) {
+    console.error(err);
+    showToast('Export failed', err.message || 'Could not generate official PDF.', 'info');
+  }
+}
+
+async function buildLegacyPA1663Bytes(patientId) {
+  const patient = patientRegistry.find((p) => p.id === patientId);
+  if (!patient) throw new Error('Patient not found');
 
   const { PDFDocument, StandardFonts, rgb } = await loadPdfLib();
   const templateBytes = await fetchOfficialTemplate('PA_1663');
@@ -77,13 +108,7 @@ async function exportOfficialPA1663(patientId) {
     /* appearance update optional */
   }
 
-  const bytes = await pdfDoc.save();
-  downloadPdfBlob(bytes, OFFICIAL_FORMS.PA_1663.filename(patient));
-  showToast(
-    'Official PA 1663 Ready',
-    'Downloaded the official DHS Employability Assessment Form with fields pre-filled. Provider must review, sign, and date before submission.',
-    'success'
-  );
+  return pdfDoc.save();
 }
 
 function downloadPdfBlob(bytes, filename) {
@@ -97,6 +122,9 @@ function downloadPdfBlob(bytes, filename) {
 }
 
 async function exportFormPDF(patientId, formId) {
+  if (typeof shouldUseOfficialPdfViewer === 'function' && shouldUseOfficialPdfViewer(formId)) {
+    return downloadFilledOfficialPdf(patientId, formId);
+  }
   if (formId === 'PA_1663') {
     return exportOfficialPA1663(patientId);
   }
@@ -122,4 +150,5 @@ async function exportAllOfficialForms(patientId) {
 window.OFFICIAL_FORMS = OFFICIAL_FORMS;
 window.exportFormPDF = exportFormPDF;
 window.exportOfficialPA1663 = exportOfficialPA1663;
+window.downloadFilledOfficialPdf = downloadFilledOfficialPdf;
 window.exportAllOfficialForms = exportAllOfficialForms;
