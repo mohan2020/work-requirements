@@ -1,7 +1,6 @@
 /**
  * SMART on FHIR clinician workflow — same exemption forms as staff outreach,
  * pre-filled from shared form state, saved to chart, clinician sign-off.
- * Patient signature capture is deferred (workflow TBD).
  */
 const fhirFormState = { activeFormId: 'PA_MF' };
 
@@ -57,6 +56,9 @@ function fhirLoadPatientForms(patientId) {
 }
 
 function fhirSaveToChart(patientId, formId) {
+  if (typeof captureFhirSignaturesToFormState === 'function') {
+    captureFhirSignaturesToFormState(patientId, formId);
+  }
   const completion = getFormCompletion(patientId, formId);
   saveFormSubmission(patientId, formId, getFormState(patientId, formId), {
     percentComplete: completion.percent,
@@ -85,19 +87,18 @@ function fhirClinicianSignOff(patientId, formId) {
   const patient = patientRegistry.find((p) => p.id === patientId);
   if (!patient) return;
 
-  const canvasEl = document.getElementById('sig-pad-clinician');
-  let sigUrl = null;
-  if (canvasEl && typeof canvas !== 'undefined' && canvas) {
-    const prompt = document.getElementById('sig-pad-prompt');
-    if (prompt && !prompt.classList.contains('hidden')) {
-      showToast('Signature required', 'Draw your provider signature before signing off.', 'info');
-      return;
-    }
-    sigUrl = canvas.toDataURL('image/png');
+  if (typeof captureFhirSignaturesToFormState === 'function') {
+    captureFhirSignaturesToFormState(patientId, formId);
   }
 
-  const completion = getFormCompletion(patientId, formId);
   const state = getFormState(patientId, formId);
+  if (!state.providerSignatureDataUrl) {
+    showToast('Signature required', 'Draw your provider signature before signing off.', 'info');
+    return;
+  }
+  const sigUrl = state.providerSignatureDataUrl;
+
+  const completion = getFormCompletion(patientId, formId);
   state.providerSigned = true;
   state.attestationDate = todayISO();
   if (sigUrl) state.providerSignatureDataUrl = sigUrl;
@@ -193,32 +194,34 @@ function renderFhirExemptionFormsPanel(patient) {
     <div class="flex flex-wrap gap-2 mb-4">
       <span class="text-[10px] font-bold px-2 py-1 rounded-full bg-slate-100 text-slate-700">${wf.completion.percent}% fields complete</span>
       ${wf.savedToChart ? '<span class="text-[10px] font-bold px-2 py-1 rounded-full bg-sky-100 text-sky-800">In patient chart</span>' : ''}
+      ${wf.patientSigned ? '<span class="text-[10px] font-bold px-2 py-1 rounded-full bg-violet-100 text-violet-800">Patient signed</span>' : ''}
       ${wf.clinicianSigned ? '<span class="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800">Clinician signed</span>' : ''}
-      <span class="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">Patient signature — TBD</span>
     </div>`;
 
-  const patientSignNotice = `
-    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 mt-4">
-      <i class="fa-solid fa-circle-info mr-1"></i>
-      <strong>Patient signature not yet captured.</strong> Section A (patient self-declaration) can be pre-filled
-      from outreach data; how wet ink / e-sign is collected is still to be defined.
-    </div>`;
+  const state = getFormState(patient.id, formId);
+  const patientSigBlock = !isLocked && typeof renderSignaturePadHtml === 'function'
+    ? renderSignaturePadHtml({
+      canvasId: 'sig-pad-patient',
+      label: '<i class="fa-solid fa-pen-nib text-violet-600 mr-1"></i>Patient signature',
+      hint: 'Patient signs here (mouse or stylus)',
+      stroke: '#7c3aed',
+      variant: 'fhir',
+    })
+    : (wf.patientSigned ? `
+    <div class="bg-violet-50 border border-violet-200 rounded-lg p-4 mt-4 text-center text-violet-800 text-xs">
+      <i class="fa-solid fa-circle-check text-violet-600 text-lg mb-1"></i>
+      <p class="font-bold">Patient signature captured</p>
+    </div>` : '');
 
   const signatureBlock = !isLocked ? `
-    <div class="bg-white border border-slate-200 rounded-xl p-4 mt-4 space-y-3">
-      <div class="flex justify-between items-center">
-        <span class="text-[10px] font-bold text-slate-800 uppercase tracking-wider">
-          <i class="fa-solid fa-pen-nib text-sky-600 mr-1"></i>Provider signature
-        </span>
-        <button type="button" onclick="clearClinicianSignature()" class="text-rose-600 text-[10px] font-semibold hover:underline">Clear</button>
-      </div>
-      <div class="border border-slate-300 rounded bg-slate-50 h-28 relative overflow-hidden">
-        <canvas id="sig-pad-clinician" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
-        <div id="sig-pad-prompt" class="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-[10px]">
-          Draw signature with mouse or stylus
-        </div>
-      </div>
-    </div>` : `
+    ${patientSigBlock}
+    ${typeof renderSignaturePadHtml === 'function' ? renderSignaturePadHtml({
+      canvasId: 'sig-pad-clinician',
+      label: '<i class="fa-solid fa-pen-nib text-sky-600 mr-1"></i>Provider signature',
+      hint: 'Draw signature with mouse or stylus',
+      stroke: '#0284c7',
+      variant: 'fhir',
+    }) : ''}` : `
     <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mt-4 text-center text-emerald-800 text-xs">
       <i class="fa-solid fa-circle-check text-emerald-600 text-lg mb-1"></i>
       <p class="font-bold">Provider attestation signed · saved to chart</p>
@@ -265,7 +268,6 @@ function renderFhirExemptionFormsPanel(patient) {
         ${statusChips}
         ${pdfNotice}
         ${questionnaireHost}
-        ${useOfficialPdf ? '' : patientSignNotice}
         ${signatureBlock}
         ${actions}
       </div>
@@ -274,9 +276,10 @@ function renderFhirExemptionFormsPanel(patient) {
 
 function mountFhirOfficialPdfIfNeeded(patient) {
   const formId = fhirFormState.activeFormId || 'PA_MF';
-  if (typeof shouldUseOfficialPdfViewer !== 'function' || !shouldUseOfficialPdfViewer(formId)) return;
+  if (typeof shouldUseOfficialPdfViewer !== 'function' || !shouldUseOfficialPdfViewer(formId)) return Promise.resolve();
   const host = document.getElementById('fhir-official-pdf-host');
-  if (host && patient) mountOfficialPdfViewer(host, patient.id, formId);
+  if (host && patient) return mountOfficialPdfViewer(host, patient.id, formId);
+  return Promise.resolve();
 }
 
 function renderFHIRAppContent(patient) {
@@ -336,8 +339,11 @@ function renderFHIRAppContent(patient) {
     </div>`;
 
   setTimeout(() => {
-    if (typeof initSignaturePad === 'function') initSignaturePad();
-    mountFhirOfficialPdfIfNeeded(patient);
+    if (typeof destroyAllSignaturePads === 'function') destroyAllSignaturePads();
+    if (typeof initSignaturePads === 'function') initSignaturePads(container);
+    const formId = fhirFormState.activeFormId || 'PA_MF';
+    if (typeof restoreFhirSignatures === 'function') restoreFhirSignatures(patient.id, formId);
+    void mountFhirOfficialPdfIfNeeded(patient);
   }, 100);
 }
 

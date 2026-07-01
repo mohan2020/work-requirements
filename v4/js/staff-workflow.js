@@ -192,12 +192,47 @@ function setStaffForm(formId) {
 
 function refreshStaffDrawerCenter() {
   unmountOfficialPdfViewer();
+  if (typeof destroyAllSignaturePads === 'function') destroyAllSignaturePads();
   const panel = document.getElementById('staff-od-panel');
   const formCol = panel?.querySelector('.od-col.form');
   if (formCol) {
     formCol.outerHTML = renderStaffDrawerCenter();
     if (window.lucide) lucide.createIcons();
-    mountStaffOfficialPdfIfNeeded();
+    initStaffDrawerSignaturePads();
+    void mountStaffOfficialPdfIfNeeded();
+  }
+}
+
+function renderStaffSignatureSection(patientId, formId) {
+  if (typeof renderSignaturePadHtml !== 'function') return '';
+  return `
+    <div class="staff-signature-section">
+      <p class="staff-sig-section-title">Signatures</p>
+      ${renderSignaturePadHtml({
+        canvasId: 'staff-sig-patient',
+        label: 'Patient signature',
+        hint: 'Patient signs here (mouse or stylus)',
+        stroke: '#7c3aed',
+        variant: 'staff',
+      })}
+      ${renderSignaturePadHtml({
+        canvasId: 'staff-sig-provider',
+        label: 'Provider signature',
+        hint: 'Provider signs here (optional during outreach)',
+        stroke: '#0284c7',
+        variant: 'staff',
+      })}
+    </div>`;
+}
+
+function initStaffDrawerSignaturePads() {
+  const host = document.getElementById('staff-od-panel');
+  if (!host || typeof initSignaturePads !== 'function') return;
+  initSignaturePads(host);
+  const pid = staffState.activePatientId;
+  const fid = staffState.selectedFormId;
+  if (pid && fid && typeof restoreStaffDrawerSignatures === 'function') {
+    restoreStaffDrawerSignatures(pid, fid);
   }
 }
 
@@ -227,7 +262,8 @@ function renderStaffDrawer() {
 
   if (window.lucide) lucide.createIcons();
   bindStaffDrawerEvents();
-  mountStaffOfficialPdfIfNeeded();
+  initStaffDrawerSignaturePads();
+  void mountStaffOfficialPdfIfNeeded();
 }
 
 function renderStaffDrawerContext(p) {
@@ -328,6 +364,7 @@ function renderStaffDrawerCenter() {
         <span>${completion.percent}%</span>
       </div>
       <div id="staff-official-pdf-host" class="staff-official-pdf-host"></div>
+      ${renderStaffSignatureSection(p.id, staffState.selectedFormId)}
       <div class="staff-drawer-actions">
         <div class="btn-row">
           <button type="button" class="staff-btn-secondary" onclick="staffSavePartial()">Save partial draft</button>
@@ -357,6 +394,7 @@ function renderStaffDrawerCenter() {
         <h4>Still needed (${remaining.length})</h4>
         <div class="staff-field-list">${renderStaffFieldItems(p.id, staffState.selectedFormId, remaining, false)}</div>
       </div>
+      ${renderStaffSignatureSection(p.id, staffState.selectedFormId)}
       <div class="staff-drawer-actions">
         <div class="btn-row">
           <button type="button" class="staff-btn-secondary" onclick="staffSavePartial()">Save partial draft</button>
@@ -522,6 +560,9 @@ async function staffSavePartial() {
   const pid = staffState.activePatientId;
   const fid = staffState.selectedFormId;
   if (!pid || !fid) return;
+  if (typeof captureSignaturesToFormState === 'function') {
+    captureSignaturesToFormState(pid, fid);
+  }
   const useOfficialPdf = typeof shouldUseOfficialPdfViewer === 'function' && shouldUseOfficialPdfViewer(fid);
   const completion = useOfficialPdf && typeof getOfficialPdfCompletionAsync === 'function'
     ? await getOfficialPdfCompletionAsync(pid, fid)
@@ -533,7 +574,7 @@ async function staffSavePartial() {
   showToast(
     'Draft saved',
     useOfficialPdf
-      ? `${FORM_SCHEMAS[fid].shortTitle} — ${completion.percent}% EHR fields mapped on official PDF.`
+      ? `${FORM_SCHEMAS[fid].shortTitle} — ${completion.percent}% fields complete on official PDF.`
       : `${FORM_SCHEMAS[fid].shortTitle} — ${completion.percent}% complete.`,
     'success'
   );
@@ -544,7 +585,7 @@ async function staffSaveAndDownload() {
   const pid = staffState.activePatientId;
   const fid = staffState.selectedFormId;
   if (!pid || !fid) return;
-  staffSavePartial();
+  await staffSavePartial();
   finalizeFormSubmission(pid, fid);
   const useOfficialPdf = typeof shouldUseOfficialPdfViewer === 'function' && shouldUseOfficialPdfViewer(fid);
   if (useOfficialPdf && typeof downloadFilledOfficialPdf === 'function') {

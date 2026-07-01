@@ -56,6 +56,7 @@
     <script src="js/pdf-custom-overlays.js"></script>
     <script src="js/mapping-storage.js"></script>
     <script src="js/form-engine.js"></script>
+    <script src="js/signature-pad.js"></script>
     <script src="js/pdf-form-fill.js"></script>
     <script src="js/pdf-map-viewer.js"></script>
     <script src="js/official-pdf-viewer.js"></script>
@@ -588,10 +589,6 @@
         let fhirViewTab = 'forms'; // legacy — unified forms view in fhir-workflow.js
         let currentSelectedPatientIdForOutreach = 'P101';
 
-        // Signature Pad Draw Context
-        let canvas, ctx;
-        let drawing = false;
-
         // Initialize App on Window Load
         window.onload = function() {
             populateFHIRPatientSelectors();
@@ -599,7 +596,9 @@
             checkApiKeyStatus();
             initStaffNavCollapse();
             if (window.lucide) lucide.createIcons();
-            window.addEventListener('resize', handleCanvasResize);
+            window.addEventListener('resize', () => {
+              if (typeof handleSignaturePadResize === 'function') handleSignaturePadResize();
+            });
         };
 
         // Check if API key is in localstorage
@@ -706,92 +705,6 @@
 
             // Render SMART on FHIR Application Interface Container inside the iframe boundary
             renderFHIRAppContent(patient);
-            
-            // Initialize/reset canvas signature listeners
-            setTimeout(() => {
-                initSignaturePad();
-            }, 100);
-        }
-    </script>
-
-    <script>
-        // Clinician signature pad (FHIR provider attestation)
-        function initSignaturePad() {
-            canvas = document.getElementById('sig-pad-clinician');
-            if (!canvas) return;
-
-            ctx = canvas.getContext('2d');
-            handleCanvasResize();
-
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 2.5;
-            ctx.lineCap = 'round';
-
-            canvas.addEventListener('mousedown', startDrawing);
-            canvas.addEventListener('mousemove', draw);
-            canvas.addEventListener('mouseup', stopDrawing);
-            canvas.addEventListener('mouseout', stopDrawing);
-            canvas.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                startDrawing(e.touches[0]);
-            });
-            canvas.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                draw(e.touches[0]);
-            });
-            canvas.addEventListener('touchend', stopDrawing);
-        }
-
-        function handleCanvasResize() {
-            if (!canvas) return;
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 2.5;
-            ctx.lineCap = 'round';
-        }
-
-        function startDrawing(e) {
-            drawing = true;
-            const prompt = document.getElementById('sig-pad-prompt');
-            if (prompt) prompt.classList.add('hidden');
-            const pos = getMousePos(e);
-            ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y);
-        }
-
-        function draw(e) {
-            if (!drawing) return;
-            const pos = getMousePos(e);
-            ctx.lineTo(pos.x, pos.y);
-            ctx.stroke();
-        }
-
-        function stopDrawing() {
-            drawing = false;
-        }
-
-        function getMousePos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            return {
-                x: (clientX - rect.left) / (rect.right - rect.left) * canvas.width,
-                y: (clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
-            };
-        }
-
-        function clearClinicianSignature() {
-            if (!canvas) return;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const prompt = document.getElementById('sig-pad-prompt');
-            if (prompt) prompt.classList.remove('hidden');
-        }
-
-        /** @deprecated use fhirClinicianSignOff — kept for screenshot scripts */
-        function submitExemptionAttestation() {
-            fhirClinicianSignOff(currentPatientFHIRId, fhirFormState.activeFormId || 'PA_MF');
         }
     </script>
 

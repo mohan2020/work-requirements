@@ -83,9 +83,11 @@ async function buildLegacyPA1663Bytes(patientId) {
 
   Object.entries(values).forEach(([fieldName, value]) => safeSetTextField(form, fieldName, value));
 
-  if (patient.signatureDataUrl) {
+  if (patient.signatureDataUrl || getFormState(patientId, 'PA_1663').patientSignatureDataUrl) {
+    const state = getFormState(patientId, 'PA_1663');
+    const sigUrl = state.patientSignatureDataUrl || patient.signatureDataUrl;
     try {
-      const pngBytes = await fetch(patient.signatureDataUrl).then((r) => r.arrayBuffer());
+      const pngBytes = await fetch(sigUrl).then((r) => r.arrayBuffer());
       const png = await pdfDoc.embedPng(pngBytes);
       const pages = pdfDoc.getPages();
       const page = pages[pages.length - 1];

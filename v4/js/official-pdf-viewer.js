@@ -7,6 +7,7 @@ const officialPdfViewerState = {
   formId: null,
   hostEl: null,
   scale: 1,
+  mountGen: 0,
 };
 
 function unmountOfficialPdfViewer() {
@@ -143,18 +144,26 @@ async function updateOfficialPdfProgress(patientId, formId) {
 
 async function mountOfficialPdfViewer(hostEl, patientId, formId) {
   if (!hostEl) return;
+  const mountGen = ++officialPdfViewerState.mountGen;
   unmountOfficialPdfViewer();
   officialPdfViewerState.hostEl = hostEl;
+  officialPdfViewerState.mountGen = mountGen;
 
   hostEl.innerHTML = '<div class="official-pdf-loading"><span>Loading official form…</span></div>';
 
   try {
     await loadFormsManifestCached();
+    if (mountGen !== officialPdfViewerState.mountGen) return;
+
     const patient = patientRegistry.find((p) => p.id === patientId);
     if (!patient) throw new Error('Patient not found');
 
     const templateBytes = await loadOfficialTemplateBytes(formId);
+    if (mountGen !== officialPdfViewerState.mountGen) return;
+
     const mappings = await getResolvedMappingsForForm(formId);
+    if (mountGen !== officialPdfViewerState.mountGen) return;
+
     const widgetsByName = await PDFMapViewer.extractFieldWidgets(templateBytes);
     const acroEntries = getViewerAcroFieldEntries(mappings, widgetsByName);
     const customCount = mappings.filter((m) => m.isCustom && m.source !== 'skip').length;
@@ -187,9 +196,12 @@ async function mountOfficialPdfViewer(hostEl, patientId, formId) {
 
     const canvasHost = hostEl.querySelector('#official-pdf-canvas-host');
     const { scale } = await PDFMapViewer.mountPagesAtScale(canvasHost, templateBytes, 'fit-width');
+    if (mountGen !== officialPdfViewerState.mountGen) return;
+
     officialPdfViewerState.scale = scale;
 
     const mounted = mountFormFieldOverlays(canvasHost, mappings, acroEntries, patientId, formId, patient, scale);
+    if (mountGen !== officialPdfViewerState.mountGen) return;
 
     officialPdfViewerState.patientId = patientId;
     officialPdfViewerState.formId = formId;

@@ -355,9 +355,11 @@ async function buildFilledOfficialPdf(patientId, formId, options = {}) {
     }
   }
 
-  if (patient.signatureDataUrl && formId === 'PA_1663') {
+  const state = getFormState(patientId, formId);
+  const patientSigUrl = state.patientSignatureDataUrl || patient.signatureDataUrl;
+  if (patientSigUrl && formId === 'PA_1663') {
     try {
-      const pngBytes = await fetch(patient.signatureDataUrl).then((r) => r.arrayBuffer());
+      const pngBytes = await fetch(patientSigUrl).then((r) => r.arrayBuffer());
       const png = await doc.embedPng(pngBytes);
       const pages = doc.getPages();
       const page = pages[pages.length - 1];
@@ -378,6 +380,16 @@ async function buildFilledOfficialPdf(patientId, formId, options = {}) {
   return doc.save();
 }
 
+function isTrackableFieldValue(m, val) {
+  if (m.fieldType === 'checkbox' || m.pdfType === 'CheckBox') return !!val;
+  return val !== undefined && val !== null && String(val).trim() !== '';
+}
+
+function resolveTrackableFieldValue(m, patient, formId) {
+  if (m.isCustom) return resolveMappingPatientValue(m, patient, formId);
+  return resolveAcroFieldValue(m.pdfField, m, patient, formId);
+}
+
 function getOfficialPdfCompletion(patientId, formId) {
   const patient = patientRegistry.find((p) => p.id === patientId);
   const mappings = getMappingsForFill(formId);
@@ -387,29 +399,25 @@ function getOfficialPdfCompletion(patientId, formId) {
       : { filled: 0, total: 0, percent: 0 };
   }
 
-  const mappable = mappings.filter((m) => m.source === 'ehr' || (m.isCustom && m.source !== 'skip'));
-  const manual = mappings.filter((m) => m.source === 'manual' && m.pdfType !== 'Signature' && !m.isCustom);
-  const total = mappable.length + manual.length;
+  const trackable = mappings.filter((m) => {
+    if (m.source === 'skip') return false;
+    if (m.isCustom) return true;
+    return m.pdfType !== 'Button';
+  });
+
   let filled = 0;
-
-  mappable.forEach((m) => {
-    const val = resolveMappingPatientValue(m, patient, formId);
-    if (val !== undefined && val !== null && String(val).trim() !== '') filled += 1;
+  trackable.forEach((m) => {
+    if (isTrackableFieldValue(m, resolveTrackableFieldValue(m, patient, formId))) filled += 1;
   });
 
-  mappable.forEach((m) => {
-    if (m.source === 'manual' && m.isCustom) {
-      const val = getCustomFieldValue(patientId, formId, customFieldKey(m));
-      if (val !== undefined && val !== null && String(val).trim() !== '') filled += 1;
-    }
-  });
+  const total = trackable.length;
 
   return {
     filled,
-    total: total || mappable.length,
-    percent: total ? Math.round((filled / total) * 100) : (mappable.length ? Math.round((filled / mappable.length) * 100) : 0),
+    total: total || 1,
+    percent: total ? Math.round((filled / total) * 100) : 0,
     prefilledFromEhr: filled,
-    manualRemaining: manual.length + mappable.filter((m) => m.isCustom && m.source === 'manual').length,
+    manualRemaining: trackable.filter((m) => m.source === 'manual' || m.source === 'unmapped').length,
   };
 }
 
@@ -422,20 +430,25 @@ async function getOfficialPdfCompletionAsync(patientId, formId) {
       : { filled: 0, total: 0, percent: 0, customFieldCount: 0 };
   }
 
-  const trackable = mappings.filter((m) => {
-    if (m.source === 'skip') return false;
-    if (m.isCustom) return true;
-    return m.source === 'ehr' || (m.source === 'manual' && m.pdfType !== 'Signature');
-  });
+  let widgetsByName = null;
+  try {
+    const bytes = await loadOfficialTemplateBytes(formId);
+    if (bytes?.byteLength && window.PDFMapViewer?.extractFieldWidgets) {
+      widgetsByName = await PDFMapViewer.extractFieldWidgets(bytes);
+    }
+  } catch (_) {
+    /* template unavailable */
+  }
+
+  const acroEntries = widgetsByName
+    ? getViewerAcroFieldEntries(mappings, widgetsByName).filter((m) => m.pdfType !== 'Button')
+    : mappings.filter((m) => !m.isCustom && m.source !== 'skip' && m.pdfType !== 'Button');
+  const customTrackable = mappings.filter((m) => m.isCustom && m.source !== 'skip');
+  const trackable = [...acroEntries, ...customTrackable];
 
   let filled = 0;
   trackable.forEach((m) => {
-    const val = resolveMappingPatientValue(m, patient, formId);
-    if (m.fieldType === 'checkbox' || m.pdfType === 'CheckBox') {
-      if (val) filled += 1;
-    } else if (val !== undefined && val !== null && String(val).trim() !== '') {
-      filled += 1;
-    }
+    if (isTrackableFieldValue(m, resolveTrackableFieldValue(m, patient, formId))) filled += 1;
   });
 
   const customFieldCount = mappings.filter((m) => m.isCustom && m.source !== 'skip').length;

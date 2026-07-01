@@ -216,8 +216,9 @@ function resolveEhrPatientValue(fieldId, patient, formId = 'PA_1663') {
     case 'system.examDate':
       return formatPatientDate(state.examDate || state.attestationDate) || new Date().toLocaleDateString('en-US');
     case 'manual.patientSignature':
+      return state.patientSignatureDataUrl || patient.signatureDataUrl ? '(signed)' : '';
     case 'manual.providerSignature':
-      return '';
+      return state.providerSignatureDataUrl ? '(signed)' : '';
     case 'manual.custom':
       return '';
     default:
